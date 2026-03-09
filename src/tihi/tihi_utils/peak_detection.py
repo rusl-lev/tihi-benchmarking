@@ -10,7 +10,7 @@ def find_peaks(class_interpolate, window_size=10, threshold=0.01, min_amp=0.0):
             min_amp (float, optional): Minimum amplitude of peaks. Defaults to 0.0.
 
         Returns:
-            peaks (list): List of indices where peaks are detected.
+            peaks (numpy.ndarray): List of the positions of the peaks detected in the form [x, y] == [wavenumber, intensity].
     """
     peaks = []
 
@@ -26,9 +26,9 @@ def find_peaks(class_interpolate, window_size=10, threshold=0.01, min_amp=0.0):
         # Check if the central point is the maximum within its window
         # and if the amplitude is bigger than the minimum required value
         if bool_amplitude and bool_threshold:
-            peaks.append(i)
+            peaks.append([class_interpolate.x_val[i], class_interpolate.y_val[i]])
         
-    return peaks
+    return np.array(peaks)
 
 def second_derivative(class_interpolate):
     """Compute the second derivative of the interpolated signal.
