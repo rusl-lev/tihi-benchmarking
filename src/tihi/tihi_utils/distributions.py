@@ -126,6 +126,7 @@ class LorentzianFitter():
         # self.start_params = self.params.flatten().tolist()
         self.decompositions = []
         self.output_params = np.zeros(shape=(self.centers.shape[0], 3))
+        self.approximation_results = []
 
         for i in range(spec_bounds.shape[0]-1):
             x_ub = self.bounds[i+1]
@@ -138,7 +139,7 @@ class LorentzianFitter():
             y_masked = self.y_vals[mask]
             approx, params = self.approximator(max_iter, self.params[i], peak_deviation_bound, x_masked, y_masked)
             self.output_params[i] = params
-            self.approximation_results = approx
+            self.approximation_results.append(approx)
         
     def approximator(self, max_iter, start_params, bounds, x_vals, y_vals):
         """
