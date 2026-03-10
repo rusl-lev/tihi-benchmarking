@@ -187,8 +187,8 @@ class LorentzianFitter():
         """
         params = params.tolist()
         params = [params[i:i + 3] for i in range(0, len(params), 3)]
-        self.decompositions = [self.lorentzian(x, centre, amp, gamma) for centre, amp, gamma in params]
-        return np.sum(self.decompositions, axis=0)
+        decompositions = [self.lorentzian(x, centre, amp, gamma) for centre, amp, gamma in params]
+        return np.sum(decompositions, axis=0)
 
     def residual(self, params, x_vals, y_vals):
         """
