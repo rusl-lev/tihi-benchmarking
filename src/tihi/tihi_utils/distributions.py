@@ -122,8 +122,8 @@ class LorentzianFitter():
         self.centers = peaks[:,0]
         self.amplitudes = peaks[:,1]
         self.gammas = [1]*len(self.centers)
-        self.params = np.array([self.centers, self.amplitudes, self.gammas])
-        self.start_params = self.params.tolist()
+        self.params = np.array([self.centers, self.amplitudes, self.gammas]).T
+        # self.start_params = self.params.flatten().tolist()
         self.decompositions = []
         self.output_params = np.zeros(shape=(self.centers.shape[0], 3))
 
@@ -136,12 +136,12 @@ class LorentzianFitter():
             mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
             x_masked = self.x_vals[mask]
             y_masked = self.y_vals[mask]
-            approx, params = self.approximator(max_iter, peak_deviation_bound, x_masked, y_masked)
+            approx, params = self.approximator(max_iter, self.params[i], peak_deviation_bound, x_masked, y_masked)
             self.output_params[i] = params
 
         return self.output_params
         
-    def approximator(self, max_iter, bounds, x_vals, y_vals):
+    def approximator(self, max_iter, start_params, bounds, x_vals, y_vals):
         """
         Perform Lorentzian fitting using least squares optimization.
         
@@ -150,7 +150,7 @@ class LorentzianFitter():
         :Notes : Uses soft L1 loss and bounds parameters to constrain optimization.
         """
         parameters = least_squares(self.residual,
-                            self.start_params, args=(x_vals, y_vals),
+                            start_params, args=(x_vals, y_vals),
                             bounds=bounds,
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
