@@ -111,22 +111,37 @@ class LorentzianFitter():
     :attribute start_params (list) : Flattened list of initial parameters.
     :attribute decompositions (list) : List to store individual Lorentzian functions.
     """
-    def __init__(self, InterpolatedData, peaks,
+    def __init__(self, data, peaks, spec_bounds, peak_rtol,
                  max_iter=100):
-        self.x_vals = InterpolatedData.x_val
-        self.y_vals = InterpolatedData.y_val
+        self.x_vals = data[:,0]
+        self.y_vals = data[:,1]
         
         # initial parameters
-        self.centers = self.x_vals[peaks]
-        self.amplitudes = self.y_vals[peaks]
+        self.peak_position_tolerance = peak_rtol
+        self.bounds = spec_bounds
+        self.centers = peaks[:,0]
+        self.amplitudes = peaks[:,1]
         self.gammas = [1]*len(self.centers)
-        self.params = np.array([self.centers, self.amplitudes,self.gammas]).T
+        self.params = np.array([self.centers, self.amplitudes, self.gammas]).T
         self.start_params = self.params.flatten().tolist()
         self.decompositions = []
+        self.output_params = np.zeros(shape=(self.centers.shape[0], 3))
 
-        self.approximator(max_iter)
+        for i in range(spec_bounds.shape[0]-1):
+            x_ub = self.bounds[i+1]
+            x_lb = self.bounds[i]
+            allowed_dev = (x_ub - x_lb) * self.peak_position_tolerance
+            peak = self.centers[i]
+            peak_deviation_bound = ([peak - allowed_dev, -np.inf, -np.inf], [peak + allowed_dev, np.inf, np.inf])
+            mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
+            x_masked = self.x_vals[mask]
+            y_masked = self.y_vals[mask]
+            approx, params = self.approximator(max_iter, peak_deviation_bound, x_masked, y_masked)
+            self.output_params[i] = params
+
+        return self.output_params
         
-    def approximator(self, max_iter):
+    def approximator(self, max_iter, bounds, x_vals, y_vals):
         """
         Perform Lorentzian fitting using least squares optimization.
         
@@ -134,19 +149,20 @@ class LorentzianFitter():
         :return error (float) : Mean absolute error of the fitting.
         :Notes : Uses soft L1 loss and bounds parameters to constrain optimization.
         """
-        self.params = least_squares(self.residual,
-                            self.start_params, args=(self.x_vals, self.y_vals),
-                            bounds=(-np.max(self.x_vals),
-                                    np.max(self.x_vals)),
+        parameters = least_squares(self.residual,
+                            self.start_params, args=(x_vals, y_vals),
+                            bounds=bounds,
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
-        print(self.params)
-        print("the error for this run is: ", np.mean(self.residual(self.params, self.x_vals, self.y_vals)))
-
-        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.x_vals])
-        error = np.mean(np.abs(self.y_vals - self.results))
         
-        return error
+        # params = np.array([parameters[i:i + 3] for i in range(0, len(parameters), 3)])
+        # print(self.params)
+        # print("the error for this run is: ", np.mean(self.residual(self.params, self.x_vals, self.y_vals)))
+
+        approximation_results = np.array([self.lorentzian_sum(x, parameters) for x in x_vals])
+        # error = np.mean(np.abs(self.y_vals - self.results))
+        
+        return approximation_results, parameters
     
     def lorentzian(self, x, center, amplitude, gamma):
         """
