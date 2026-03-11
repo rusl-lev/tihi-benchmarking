@@ -130,10 +130,12 @@ class LorentzianFitter():
         self.approximation_results = []
         print(f'Shape of the bounds array: ', self.bounds.shape)
         print(f'Bounds array: ', self.bounds)
+        print(f'X values: {self.x_vals}')
 
         for i in range(self.bounds.shape[0]-1):
             x_ub = self.bounds[i+1]
             x_lb = self.bounds[i]
+            print(f'Lower bound: {x_lb}; upper bound: {x_ub}')
             allowed_dev = (x_ub - x_lb) * self.peak_position_tolerance
             peak = self.centers[i]
             peak_deviation_bound = ([(peak - allowed_dev), 0, 0], [(peak + allowed_dev), np.inf, np.inf])
