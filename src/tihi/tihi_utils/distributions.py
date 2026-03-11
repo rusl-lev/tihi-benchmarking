@@ -128,8 +128,10 @@ class LorentzianFitter():
         # self.output_params = np.zeros(shape=(self.centers.shape[0], 3))
         self.output_params = []
         self.approximation_results = []
+        print(f'Shape of the bounds array: ', self.bounds.shape)
+        print(f'Bounds array: ', self.bounds)
 
-        for i in range(spec_bounds.shape[0]-1):
+        for i in range(self.bounds.shape[0]-1):
             x_ub = self.bounds[i+1]
             x_lb = self.bounds[i]
             allowed_dev = (x_ub - x_lb) * self.peak_position_tolerance
