@@ -138,8 +138,11 @@ class LorentzianFitter():
             mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
             x_masked = self.x_vals[mask]
             y_masked = self.y_vals[mask]
+            print(f'X masked: {x_masked}')
+            print(f'Y masked: {y_masked}')
             approx, params = self.approximator(max_iter, self.params[i], peak_deviation_bound, x_masked, y_masked)
-            print(params)
+            print(f'Paramerers in {i}th iteration: ', params)
+            print(f'Lorentzian approximation in {i}th iteration', approx)
             # self.output_params[i] = params
             self.output_params.append(params)
             self.approximation_results.append(approx)
