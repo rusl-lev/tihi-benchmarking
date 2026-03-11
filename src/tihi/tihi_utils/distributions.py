@@ -134,7 +134,7 @@ class LorentzianFitter():
             x_lb = self.bounds[i]
             allowed_dev = (x_ub - x_lb) * self.peak_position_tolerance
             peak = self.centers[i]
-            peak_deviation_bound = ([(peak - allowed_dev), -np.inf, -np.inf], [(peak + allowed_dev), np.inf, np.inf])
+            peak_deviation_bound = ([(peak - allowed_dev), 0, 0], [(peak + allowed_dev), np.inf, np.inf])
             mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
             x_masked = self.x_vals[mask]
             y_masked = self.y_vals[mask]
