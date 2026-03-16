@@ -151,7 +151,7 @@ class LorentzianFitter():
             self.output_params.append(params)
             self.approximation_results.append(approx)
         self.output_params = np.array(self.output_params)
-        self.approximation_results = np.array(self.approximation_results)
+        # self.approximation_results = np.array(self.approximation_results)
         
     def approximator(self, max_iter, start_params, bounds, x_vals, y_vals):
         """
