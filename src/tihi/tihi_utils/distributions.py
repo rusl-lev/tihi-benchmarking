@@ -203,7 +203,8 @@ class LorentzianFitter():
         """
         # amplitude = amplitude * (-1.0)
         gamma /= 2
-        return amplitude * (gamma / np.pi) / ((x - center) ** 2 + gamma ** 2)
+        # return amplitude * (gamma / np.pi) / ((x - center) ** 2 + gamma ** 2)
+        return (amplitude * gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
 
     def lorentzian_sum(self, x, params):
         """
