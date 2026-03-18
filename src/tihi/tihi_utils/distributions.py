@@ -113,7 +113,7 @@ class LorentzianFitter():
     :attribute decompositions (list) : List to store individual Lorentzian functions.
     """
     def __init__(self, data, peaks, spec_bounds, peak_rtol,
-                 max_iter=100):
+                 max_iter=100, verbose=False):
         self.x_vals = data[:,0]
         self.y_vals = data[:,1]
         mask = self.x_vals <= 4000
@@ -129,47 +129,50 @@ class LorentzianFitter():
         self.params = np.array([self.centers, self.amplitudes, self.gammas]).T
         self.output_params = []
         self.approximation_results = np.empty([self.bounds.shape[0]-1, self.x_vals.shape[0]])
-        print(f'Shape of the bounds array: ', self.bounds.shape)
-        print(f'Bounds array: ', self.bounds)
-        print(f'X values: {self.x_vals}')
-        print()
-        fig, axs = plt.subplots(self.bounds.shape[0], 1, figsize=(10, 20))
+        if verbose:
+            print(f'Shape of the bounds array: ', self.bounds.shape)
+            print(f'Bounds array: ', self.bounds)
+            print(f'X values: {self.x_vals}')
+            print()
+        # fig, axs = plt.subplots(self.bounds.shape[0], 1, figsize=(10, 20))
 
         for i in range(self.bounds.shape[0]-1):
             x_ub = self.bounds[i+1]
             x_lb = self.bounds[i]
-            print(f'Lower bound: {x_lb}; upper bound: {x_ub}')
             allowed_dev = (x_ub - x_lb) * self.peak_position_tolerance
             peak = self.centers[i]
             peak_deviation_bound = ([(peak - allowed_dev), 0, 0], [(peak + allowed_dev), np.inf, np.inf])
             mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
             x_masked = self.x_vals[mask]
             y_masked = self.y_vals[mask]
-            print(f'X masked: {x_masked}')
-            print(f'Y masked: {y_masked}')
             approx, params = self.approximator(max_iter, self.params[i], peak_deviation_bound, x_masked, y_masked)
-            print(f'Paramerers in {i}th iteration: ', params)
-            print(f'Lorentzian approximation in {i}th iteration', approx)
-            print(f'Shapes of approximation and x_masked: {approx.shape}, {x_masked.shape}')
-            print()
-            axs[i].plot(x_masked, y_masked, label="Approximated spectrum")
-            axs[i].plot(x_masked, approx[mask], label="Lorentzian approximated")
-            axs[i].plot(self.centers[i], self.amplitudes[i], color='k', marker='x', label="Initial Peaks")
-            axs[i].plot(params[0], params[1], color='r', marker='x', label="Fitted Peaks")
-            axs[i].set_ylabel('Signal amplitude')
+            if verbose:
+                print(f'Lower bound: {x_lb}; upper bound: {x_ub}')
+                print(f'X masked: {x_masked}')
+                print(f'Y masked: {y_masked}')
+                print(f'Paramerers in {i}th iteration: ', params)
+                print(f'Lorentzian approximation in {i}th iteration', approx)
+                print(f'Shapes of approximation and x_masked: {approx.shape}, {x_masked.shape}')
+                print()
+            # axs[i].plot(x_masked, y_masked, label="Spectrum")
+            # axs[i].plot(x_masked, approx[mask], label="Lorentzian fit")
+            # axs[i].plot(self.centers[i], self.amplitudes[i], color='k', marker='x', label="Initial Peaks")
+            # axs[i].plot(params[0], params[1], color='r', marker='x', label="Fitted Peaks")
+            # axs[i].set_ylabel('Signal amplitude')
             self.output_params.append(params)
             # self.approximation_results = np.concatenate((self.approximation_results, approx))
             self.approximation_results[i] = approx
             
         self.output_params = np.array(self.output_params)
-        self.approximation_results = self.approximation_results.sum(axis=0)
-        print(f'Shape of x and y approximated: {self.x_vals.shape}, {self.approximation_results.shape}')
-        axs[-1].plot(self.x_vals, self.y_vals, label="Spectrum")
-        axs[-1].plot(self.x_vals, self.approximation_results, label="Lorentzian Fit")
-        axs[-1].set_xlabel('Wavenumbers [$cm^{-1}$]')
-        plt.tight_layout()
-        plt.legend()
-        plt.show()
+        self.approximation_results_sum = self.approximation_results.sum(axis=0)
+        if verbose:
+            print(f'Shape of x and y approximated: {self.x_vals.shape}, {self.approximation_results.shape}')
+        # axs[-1].plot(self.x_vals, self.y_vals, label="Spectrum")
+        # axs[-1].plot(self.x_vals, self.approximation_results, label="Lorentzian Fit")
+        # axs[-1].set_xlabel('Wavenumbers [$cm^{-1}$]')
+        # plt.tight_layout()
+        # plt.legend()
+        # plt.show()
         
     def approximator(self, max_iter, start_params, bounds, x_vals, y_vals):
         """
