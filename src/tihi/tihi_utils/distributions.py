@@ -163,7 +163,7 @@ class LorentzianFitter():
             
         self.output_params = np.array(self.output_params)
         self.approximation_results = self.approximation_results.sum(axis=0)
-        print(f'Shape of x and y approximated: {self.x_val.shape}, {self.approximation_results.shape}')
+        print(f'Shape of x and y approximated: {self.x_vals.shape}, {self.approximation_results.shape}')
         axs[-1].plot(self.x_vals, self.y_vals, label="Spectrum")
         axs[-1].plot(self.x_vals, self.approximation_results, label="Lorentzian Fit")
         axs[-1].set_xlabel('Wavenumbers [$cm^{-1}$]')
