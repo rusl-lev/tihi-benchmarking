@@ -153,7 +153,7 @@ class LorentzianFitter():
             print(f'Shapes of approximation and x_masked: {approx.shape}, {x_masked.shape}')
             print()
             axs[i].plot(x_masked, y_masked, label="Approximated spectrum")
-            axs[i].plot(x_masked, approx, label="Lorentzian approximated")
+            axs[i].plot(x_masked, approx[mask], label="Lorentzian approximated")
             axs[i].plot(self.centers[i], self.amplitudes[i], color='k', marker='x', label="Initial Peaks")
             axs[i].plot(params[0], params[1], color='r', marker='x', label="Fitted Peaks")
             axs[i].set_ylabel('Signal amplitude')
