@@ -116,7 +116,10 @@ class LorentzianFitter():
                  max_iter=100):
         self.x_vals = data[:,0]
         self.y_vals = data[:,1]
-        
+        mask = self.x_vals <= 4000
+        self.x_vals = self.x_vals[mask]
+        self.y_vals = self.y_vals[mask]
+                    
         # initial parameters
         self.peak_position_tolerance = peak_rtol
         self.bounds = spec_bounds
@@ -124,11 +127,8 @@ class LorentzianFitter():
         self.amplitudes = peaks[:,1]
         self.gammas = [1]*len(self.centers)
         self.params = np.array([self.centers, self.amplitudes, self.gammas]).T
-        # self.start_params = self.params.flatten().tolist()
-        self.decompositions = []
-        # self.output_params = np.zeros(shape=(self.centers.shape[0], 3))
         self.output_params = []
-        self.approximation_results = np.array([])
+        self.approximation_results = np.empty([self.bounds.shape[0]-1, self.x_vals.shape[0]])
         print(f'Shape of the bounds array: ', self.bounds.shape)
         print(f'Bounds array: ', self.bounds)
         print(f'X values: {self.x_vals}')
@@ -157,13 +157,15 @@ class LorentzianFitter():
             axs[i].plot(self.centers[i], self.amplitudes[i], color='k', marker='x', label="Initial Peaks")
             axs[i].plot(params[0], params[1], color='r', marker='x', label="Fitted Peaks")
             axs[i].set_ylabel('Signal amplitude')
-            # self.output_params[i] = params
             self.output_params.append(params)
-            self.approximation_results = np.concatenate((self.approximation_results, approx))
+            # self.approximation_results = np.concatenate((self.approximation_results, approx))
+            self.approximation_results[i] = approx
             
         self.output_params = np.array(self.output_params)
-        print(f'Shape of x and y approximated: {self.x_vals[self.x_vals <= 3500].shape}, {self.approximation_results.shape}')
-        axs[-1].plot(self.x_vals[self.x_vals <= 3500], self.approximation_results, label="Total Fitted Spectrum")
+        self.approximation_results = self.approximation_results.sum(axis=0)
+        print(f'Shape of x and y approximated: {self.x_val.shape}, {self.approximation_results.shape}')
+        axs[-1].plot(self.x_vals, self.y_vals, label="Spectrum")
+        axs[-1].plot(self.x_vals, self.approximation_results, label="Lorentzian Fit")
         axs[-1].set_xlabel('Wavenumbers [$cm^{-1}$]')
         plt.tight_layout()
         plt.legend()
@@ -187,7 +189,7 @@ class LorentzianFitter():
         # print(self.params)
         # print("the error for this run is: ", np.mean(self.residual(self.params, self.x_vals, self.y_vals)))
 
-        approximation_results = np.array([self.lorentzian_sum(x, parameters) for x in x_vals])
+        approximation_results = np.array([self.lorentzian_sum(x, parameters) for x in self.x_vals])
         # error = np.mean(np.abs(self.y_vals - self.results))
         
         return approximation_results, parameters
