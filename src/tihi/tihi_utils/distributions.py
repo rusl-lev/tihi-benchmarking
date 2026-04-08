@@ -372,15 +372,15 @@ def complex_fitting(
     amplitudes = peaks[:,1]
     lorentz_widths = np.random.rand(*amplitudes.shape)
     gauss_widths = np.random.rand(*amplitudes.shape)
-    approximation_results = np.empty([spec_bounds.shape[0]-1, self.x_vals.shape[0]])
+    approximation_results = np.empty([spec_bounds.shape[0]-1, x_vals.shape[0]])
     output_parameters = []
     
     if verbose:
-        print(f'Shape of the bounds array: ', self.bounds.shape)
-        print(f'Bounds array: ', self.bounds)
-        print(f'X values: {self.x_vals}')
+        print(f'Shape of the bounds array: ', spec_bounds.shape)
+        print(f'Bounds array: ', spec_bounds)
+        print(f'X values: {x_vals}')
         print()
-        fig, axs = plt.subplots(self.bounds.shape[0], 1, figsize=(10, 20))
+        fig, axs = plt.subplots(spec_bounds.shape[0], 1, figsize=(10, 20))
 
     for i in range(spec_bounds.shape[0]-1):
         x_ub = spec_bounds[i+1]
