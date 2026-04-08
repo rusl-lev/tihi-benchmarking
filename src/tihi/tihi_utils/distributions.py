@@ -412,7 +412,7 @@ def complex_fitting(
             'voigt': ([(peaks - allowed_dev), 0, 0, 0], [(peaks + allowed_dev), np.inf, np.inf, np.inf])
         }
         
-        for approximator in enumerate(approximators_dict):
+        for approximator in approximators_dict:
             params = parameters_dict[approximator]
             bounds = bounds_dict[approximator]
             aprx = approximators_dict[approximator](x_vals, x_masked, y_masked, params, bounds, residual=residual, max_iter=max_iter, verbose=verbose)
