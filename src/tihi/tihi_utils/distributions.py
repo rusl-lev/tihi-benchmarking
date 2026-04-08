@@ -388,6 +388,7 @@ def complex_fitting(
         allowed_dev = (x_ub - x_lb) * peak_rtol
         peak_mask = (centers >= x_lb) & (centers <= x_ub)
         centers_i = centers[peak_mask]
+        n_peaks_i = centers_i.shape[0]
         amplitudes_i = amplitudes[peak_mask]
         lorentz_widths_i = lorentz_widths[peak_mask]
         gauss_widths_i = gauss_widths[peak_mask]
@@ -406,10 +407,14 @@ def complex_fitting(
             'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten()
         }
 
+        centers_dev_ub = peaks + allowed_dev
+        centers_dev_lb = peaks - allowed_dev
+        zeros = np.zeros(n_peaks_i)
+        infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
-            'gauss': ([(peaks - allowed_dev), 0, 0], [(peaks + allowed_dev), np.inf, np.inf]),
-            'lorentz': ([(peaks - allowed_dev), 0, 0], [(peaks + allowed_dev), np.inf, np.inf]),
-            'voigt': ([(peaks - allowed_dev), 0, 0, 0], [(peaks + allowed_dev), np.inf, np.inf, np.inf])
+            'gauss': (np.concatenate([centers_dev_lb, zeros, zeros]), np.concatenate([centers_dev_ub, infinity, infinity])),
+            'lorentz': (np.concatenate([centers_dev_lb, zeros, zeros]), np.concatenate([centers_dev_ub, infinity, infinity])),
+            'voigt': (np.concatenate([centers_dev_lb, zeros, zeros, zeros]), np.concatenate([centers_dev_ub, infinity, infinity, infinity]))
         }
         
         for approximator in approximators_dict:
