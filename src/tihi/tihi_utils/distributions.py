@@ -365,7 +365,7 @@ def complex_fitting(
     
     x_vals = data[:,0]
     y_vals = data[:,1]
-    final_approximation = np.array(x_vals, np.zeros_like(y_vals)).T
+    final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
                     
     # initial parameters
     centers = peaks[:,0]
