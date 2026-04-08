@@ -407,8 +407,8 @@ def complex_fitting(
             'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten()
         }
 
-        centers_dev_ub = peaks + allowed_dev
-        centers_dev_lb = peaks - allowed_dev
+        centers_dev_ub = centers_i + allowed_dev
+        centers_dev_lb = centers_i - allowed_dev
         zeros = np.zeros(n_peaks_i)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
