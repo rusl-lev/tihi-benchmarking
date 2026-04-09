@@ -343,7 +343,7 @@ class VoigtFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return np.log10(y_vals) - np.log10(self.lorentzian_sum(x_vals, params))
+        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params))
 
 
 approximators_dict = {
