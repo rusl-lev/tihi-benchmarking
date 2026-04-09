@@ -380,8 +380,8 @@ def complex_fitting(
     # initial parameters
     centers = peaks[:,0]
     amplitudes = peaks[:,1]
-    lorentz_widths = np.full_like(amplitudes, 1)
-    gauss_widths = np.full_like(amplitudes, 1)
+    lorentz_widths = np.full_like(amplitudes, 15)
+    gauss_widths = np.full_like(amplitudes, 15)
     approximation_results = np.empty([spec_bounds.shape[0]-1, x_vals.shape[0]])
     output_parameters = []
     
