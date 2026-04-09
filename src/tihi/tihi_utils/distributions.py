@@ -116,8 +116,7 @@ class GaussianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        eps = 1e-12
-        return np.log10(y_vals + eps) - np.log10(np.maximum(self.gaussian_sum(x_vals, params), eps))
+        return np.log10(y_vals) - np.log10(self.gaussian_sum(x_vals, params))
 
 
 class LorentzianFitter():
@@ -232,8 +231,7 @@ class LorentzianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        eps = 1e-12
-        return np.log10(y_vals + eps) - np.log10(np.maximum(self.lorentzian_sum(x_vals, params), eps))
+        return np.log10(y_vals) - np.log10(self.lorentzian_sum(x_vals, params))
     
 class VoigtFitter():
     def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, residual='default', max_iter=100, verbose=False):
@@ -348,8 +346,7 @@ class VoigtFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        eps = 1e-12
-        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params)))
+        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params))
 
 
 approximators_dict = {
