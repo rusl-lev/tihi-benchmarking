@@ -64,7 +64,8 @@ class GaussianFitter():
             self.error = error
 
         print(self.params)
-        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
+        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.x_vals])
         
         return error
     
@@ -178,7 +179,8 @@ class LorentzianFitter():
             self.error = error
 
         print(self.params)
-        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
+        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.x_vals])
         
         return error
     
@@ -292,7 +294,8 @@ class VoigtFitter():
             self.error = error
 
         print(self.params)
-        self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
+        self.results = np.array([self.voigt_sum(x, self.params) for x in self.x_vals])
         
         return error
     
@@ -346,7 +349,7 @@ class VoigtFitter():
         :return (ndarray) : Residual values.
         """
         eps = 1e-12
-        return np.log10(y_vals + eps) - np.log10(np.maximum(self.voigt_sum(x_vals, params), eps))
+        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params)))
 
 
 approximators_dict = {
@@ -378,14 +381,18 @@ def complex_fitting(
     
     x_vals = data[:,0]
     y_vals = data[:,1]
-    final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+    mask_outside = (x_vals >= 400) & (x_vals <= 3500)
+    x_vals = x_vals[mask_outside]
+    y_vals = x_vals[mask_outside]
+    # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+    final_approximation = np.array([])
                     
     # initial parameters
     centers = peaks[:,0]
     amplitudes = peaks[:,1]
     lorentz_widths = np.full_like(amplitudes, 15)
     gauss_widths = np.full_like(amplitudes, 15)
-    approximation_results = np.empty([spec_bounds.shape[0]-1, x_vals.shape[0]])
+    # approximation_results = np.empty([spec_bounds.shape[0]-1, x_vals.shape[0]])
     output_parameters = []
     
     if verbose:
@@ -393,13 +400,12 @@ def complex_fitting(
         print(f'Bounds array: ', spec_bounds)
         print(f'X values: {x_vals}')
         print()
-        fig, axs = plt.subplots(spec_bounds.shape[0]-1, 1, figsize=(10, 20))
 
     for i in range(spec_bounds.shape[0]-1):
         x_ub = spec_bounds[i+1]
         x_lb = spec_bounds[i]
         allowed_dev = (x_ub - x_lb) * peak_rtol
-        peak_mask = (centers >= x_lb) & (centers <= x_ub)
+        peak_mask = (centers >= x_lb) & (centers < x_ub)
         centers_i = centers[peak_mask]
         n_peaks_i = centers_i.shape[0]
         amplitudes_i = amplitudes[peak_mask]
@@ -443,7 +449,8 @@ def complex_fitting(
             print(f'Minimum error for bound ({x_lb}, {x_ub}) of {min_error} is produced by {bound_approximator}.')
         
         approximation_i = bound_approximator.results
-        final_approximation[:,1] += approximation_i
+        # final_approximation[:,1] += approximation_i
+        final_approximation = np.concatenate(final_approximation, approximation_i)
         params_i = reshape_params(bound_approximator.params, bound_approximator)
         output_parameters.append(params_i)
         
@@ -454,19 +461,26 @@ def complex_fitting(
             print(f'Minimum error of {min_error} for the bound is produced by {bound_approximator}.')
             print(f'Paramerers for the bound: ', params_i)
             print()
-            axs[i].plot(x_masked, y_masked, label="Spectrum")
-            axs[i].plot(x_masked, approximation_i[mask], label="Fit")
-            axs[i].plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
-            axs[i].plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
-            axs[i].set_ylabel('Signal amplitude')
-            axs[i].legend()
+            fig = plt.figure(figsize=(10, 5))
+            plt.plot(x_masked, y_masked, label="Spectrum")
+            plt.plot(x_masked, approximation_i[mask], label="Fit")
+            plt.plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
+            plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
+            plt.ylabel('Signal amplitude')
+            plt.xlabel('Wavenumbers [$cm^{-1}$]')
+            plt.title('Bound: {0} to {1} [$cm^{-1}$]'.format(x_lb, x_ub))
+            plt.legend()
+            plt.show()
+
+    len_diff = final_approximation.shape[0] - x_vals.shape[0]
+    final_approximation = np.array([x_vals, final_approximation]).T if len_diff == 0 else np.array([x_vals[:len_diff], final_approximation]).T
     
     if verbose:
-        plt.show()
         fig = plt.figure(figsize=(10,10))
         plt.plot(x_vals, y_vals, label="Spectrum")
         plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
         plt.xlabel('Wavenumbers [$cm^{-1}$]')
+        plt.ylabel('Signal amplitude')
         plt.tight_layout()
         plt.legend()
         plt.show()
