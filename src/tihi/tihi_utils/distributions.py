@@ -402,9 +402,9 @@ def complex_fitting(
         params_i = None
 
         parameters_dict = {
-            'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten(),
-            'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten(),
-            'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten()
+            'gauss': np.concatenate([centers_i, amplitudes_i, gauss_widths_i]),
+            'lorentz': np.concatenate([centers_i, amplitudes_i, lorentz_widths_i]),
+            'voigt': np.concatenate([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i])
         }
 
         centers_dev_ub = centers_i + allowed_dev
