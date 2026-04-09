@@ -380,7 +380,7 @@ def complex_fitting(
     y_vals = data[:,1]
     mask_outside = (x_vals >= 400) & (x_vals <= 3500)
     x_vals = x_vals[mask_outside]
-    y_vals = x_vals[mask_outside]
+    y_vals = y_vals[mask_outside]
     # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
     final_approximation = np.array([])
                     
