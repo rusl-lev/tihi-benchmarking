@@ -79,7 +79,7 @@ class GaussianFitter():
         :param sigma (float) : Standard deviation of the Gaussian function.
         :return (ndarray) : Calculated Gaussian function values.
         """
-        amplitude = amplitude * (-1.0)
+        # amplitude = amplitude * (-1.0)
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         return amplitude * np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
 
@@ -193,7 +193,7 @@ class LorentzianFitter():
         :param gamma (float) : Full width at half maximum (FWHM) of the Lorentzian function.
         :return (ndarray) : Calculated Lorentzian function values.
         """
-        amplitude = amplitude * (-1.0)
+        # amplitude = amplitude * (-1.0)
         gamma = lorentz_width / 2
         # return amplitude * (gamma / np.pi) / ((x - center) ** 2 + gamma ** 2)
         return (amplitude * gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
@@ -308,7 +308,7 @@ class VoigtFitter():
         :param lorentz_width (float) : Lorentzian component width of the Voigt profile.
         :return (ndarray) : Calculated Voigt profile values.
         """
-        amplitude = amplitude * (-1.0)
+        # amplitude = amplitude * (-1.0)
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         gamma = lorentz_width / 2
         z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
