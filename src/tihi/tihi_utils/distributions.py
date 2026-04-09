@@ -149,7 +149,7 @@ class LorentzianFitter():
                 
         self.approximator(max_iter, residual)
         
-    def approximator(self, max_iter, start_params, bounds, x_vals, y_vals):
+    def approximator(self, max_iter, residual):
         """
         Perform Lorentzian fitting using least squares optimization.
         
@@ -262,7 +262,7 @@ class VoigtFitter():
                 
         self.approximator(max_iter, residual)
         
-    def approximator(self, max_iter):
+    def approximator(self, max_iter, residual):
         """
         Perform Voigt fitting using least squares optimization.
         
