@@ -409,7 +409,7 @@ def complex_fitting(
 
         centers_dev_ub = centers_i + allowed_dev
         centers_dev_lb = centers_i - allowed_dev
-        lower = np.full(n_peaks_i)
+        lower = np.full(n_peaks_i, 1e-30)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
             'gauss': (np.concatenate([centers_dev_lb, lower, lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
