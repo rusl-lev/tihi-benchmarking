@@ -447,7 +447,7 @@ def complex_fitting(
         
         approximation_i = bound_approximator.results
         # final_approximation[:,1] += approximation_i
-        final_approximation = np.concatenate(final_approximation, approximation_i)
+        final_approximation = np.concatenate([final_approximation, approximation_i])
         params_i = reshape_params(bound_approximator.params, bound_approximator)
         output_parameters.append(params_i)
         
