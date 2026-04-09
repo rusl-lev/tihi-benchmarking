@@ -440,7 +440,7 @@ def complex_fitting(
         
         approximation_i = bound_approximator.results
         final_approximation[:,1] += approximation_i
-        params_i = reshape_params(bound_approximator.params)
+        params_i = reshape_params(bound_approximator.params, bound_approximator)
         output_parameters.append(params_i)
         
         if verbose:
