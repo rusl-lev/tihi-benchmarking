@@ -467,6 +467,6 @@ def complex_fitting(
         plt.legend()
         plt.show()
 
-    rmsd = np.sqrt(np.sum((final_approximation[:,1] - y_vals) ** 2))
+    rmsd = np.sqrt(np.sum(((final_approximation[:,1] - y_vals) / y_vals) ** 2))
 
     return final_approximation, output_parameters, rmsd
