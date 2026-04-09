@@ -65,7 +65,7 @@ class GaussianFitter():
 
         print(self.params)
         # self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.x_vals])
+        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
         
         return error
     
@@ -179,7 +179,7 @@ class LorentzianFitter():
 
         print(self.params)
         # self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.x_vals])
+        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
         
         return error
     
@@ -293,7 +293,7 @@ class VoigtFitter():
 
         print(self.params)
         # self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.voigt_sum(x, self.params) for x in self.x_vals])
+        self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
         
         return error
     
@@ -385,15 +385,13 @@ def complex_fitting(
     mask_outside = (x_vals >= 400) & (x_vals <= 3500)
     x_vals = x_vals[mask_outside]
     y_vals = y_vals[mask_outside]
-    # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
-    final_approximation = np.array([])
+    final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
                     
     # initial parameters
     centers = peaks[:,0]
     amplitudes = peaks[:,1]
     lorentz_widths = np.full_like(amplitudes, 15)
     gauss_widths = np.full_like(amplitudes, 15)
-    # approximation_results = np.empty([spec_bounds.shape[0]-1, x_vals.shape[0]])
     output_parameters = []
     
     if verbose:
@@ -452,8 +450,7 @@ def complex_fitting(
             print(f'Minimum error for bound ({x_lb}, {x_ub}) of {min_error} is produced by {bound_approximator}.')
         
         approximation_i = bound_approximator.results
-        # final_approximation[:,1] += approximation_i
-        final_approximation = np.concatenate([final_approximation, approximation_i])
+        final_approximation[:,1] += approximation_i
         params_i = reshape_params(bound_approximator.params, bound_approximator)
         output_parameters.append(params_i)
         
@@ -466,7 +463,7 @@ def complex_fitting(
             print()
             fig = plt.figure(figsize=(10, 5))
             plt.plot(x_masked, y_masked, label="Spectrum")
-            plt.plot(x_masked, approximation_i, label="Fit")
+            plt.plot(x_masked, approximation_i[mask], label="Fit")
             plt.plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
             plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
             plt.ylabel('Signal amplitude')
@@ -474,9 +471,6 @@ def complex_fitting(
             plt.title('Bound: ' + str(x_lb) + ' to ' + str(x_ub) + ' [$cm^{-1}$]')
             plt.legend()
             plt.show()
-
-    len_diff = final_approximation.shape[0] - x_vals.shape[0]
-    final_approximation = np.array([x_vals, final_approximation]).T if len_diff == 0 else np.array([x_vals[:len_diff], final_approximation]).T
     
     if verbose:
         fig = plt.figure(figsize=(10,10))
