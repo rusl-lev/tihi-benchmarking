@@ -466,7 +466,7 @@ def complex_fitting(
         fig = plt.figure(figsize=(10,10))
         plt.plot(x_vals, y_vals, label="Spectrum")
         plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
-        plt.set_xlabel('Wavenumbers [$cm^{-1}$]')
+        plt.xlabel('Wavenumbers [$cm^{-1}$]')
         plt.tight_layout()
         plt.legend()
         plt.show()
