@@ -460,7 +460,7 @@ def complex_fitting(
             print()
             fig = plt.figure(figsize=(10, 5))
             plt.plot(x_masked, y_masked, label="Spectrum")
-            plt.plot(x_masked, approximation_i[mask], label="Fit")
+            plt.plot(x_masked, approximation_i, label="Fit")
             plt.plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
             plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
             plt.ylabel('Signal amplitude')
