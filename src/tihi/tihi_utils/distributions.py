@@ -79,7 +79,7 @@ class GaussianFitter():
         :param sigma (float) : Standard deviation of the Gaussian function.
         :return (ndarray) : Calculated Gaussian function values.
         """
-        # amplitude = amplitude * (-1.0)
+        amplitude = amplitude * (-1.0)
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         return amplitude * np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
 
@@ -193,7 +193,7 @@ class LorentzianFitter():
         :param gamma (float) : Full width at half maximum (FWHM) of the Lorentzian function.
         :return (ndarray) : Calculated Lorentzian function values.
         """
-        # amplitude = amplitude * (-1.0)
+        amplitude = amplitude * (-1.0)
         gamma = lorentz_width / 2
         # return amplitude * (gamma / np.pi) / ((x - center) ** 2 + gamma ** 2)
         return (amplitude * gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
@@ -308,6 +308,7 @@ class VoigtFitter():
         :param lorentz_width (float) : Lorentzian component width of the Voigt profile.
         :return (ndarray) : Calculated Voigt profile values.
         """
+        amplitude = amplitude * (-1.0)
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         gamma = lorentz_width / 2
         z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
@@ -425,14 +426,15 @@ def complex_fitting(
 
         centers_lb = centers_i - allowed_dev
         centers_ub = centers_i + allowed_dev
+        amplitude_lower = np.full(n_peaks_i, 1e-10)
         amp_lb = amplitudes_i * (1 - peak_rtol)
         amp_ub = amplitudes_i * (1 + peak_rtol)
         width_lower = np.full(n_peaks_i, 0.5)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
-            'gauss': (np.array([centers_lb, amp_lb, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity]).T.flatten().tolist()),
-            'lorentz': (np.array([centers_lb, amp_lb, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity]).T.flatten().tolist()),
-            'voigt': (np.array([centers_lb, amp_lb, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity, infinity]).T.flatten().tolist())
+            'gauss': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
+            'lorentz': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
+            'voigt': (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
         }
         
         for approximator in approximators_dict:
