@@ -115,7 +115,8 @@ class GaussianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return np.log10(y_vals) - np.log10(self.gaussian_sum(x_vals, params)) + 1e-10
+        eps = 1e-12
+        return np.log10(y_vals + eps) - np.log10(np.maximum(self.gaussian_sum(x_vals, params), eps))
 
 
 class LorentzianFitter():
@@ -229,7 +230,8 @@ class LorentzianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return np.log10(y_vals) - np.log10(self.lorentzian_sum(x_vals, params)) + 1e-10
+        eps = 1e-12
+        return np.log10(y_vals + eps) - np.log10(np.maximum(self.lorentzian_sum(x_vals, params), eps))
     
 class VoigtFitter():
     def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, residual='default', max_iter=100, verbose=False):
@@ -343,7 +345,8 @@ class VoigtFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params)) + 1e-10
+        eps = 1e-12
+        return np.log10(y_vals + eps) - np.log10(np.maximum(self.voigt_sum(x_vals, params), eps))
 
 
 approximators_dict = {
@@ -419,12 +422,13 @@ def complex_fitting(
 
         centers_dev_ub = centers_i + allowed_dev
         centers_dev_lb = centers_i - allowed_dev
-        lower = np.full(n_peaks_i, 1e-30)
+        amp_lower = np.full(n_peaks_i, 1e-8)
+        width_lower = np.full(n_peaks_i, 0.5)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
-            'gauss': (np.concatenate([centers_dev_lb, lower, lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
-            'lorentz': (np.concatenate([centers_dev_lb, lower, lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
-            'voigt': (np.concatenate([centers_dev_lb, lower, lower, lower]), np.concatenate([centers_dev_ub, infinity, infinity, infinity]))
+            'gauss': (np.concatenate([centers_dev_lb, amp_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
+            'lorentz': (np.concatenate([centers_dev_lb, amp_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
+            'voigt': (np.concatenate([centers_dev_lb, amp_lower, width_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity, infinity]))
         }
         
         for approximator in approximators_dict:
