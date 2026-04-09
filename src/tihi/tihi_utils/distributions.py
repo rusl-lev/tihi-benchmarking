@@ -426,9 +426,9 @@ def complex_fitting(
         width_lower = np.full(n_peaks_i, 0.5)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
-            'gauss': (np.concatenate([centers_dev_lb, amp_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
-            'lorentz': (np.concatenate([centers_dev_lb, amp_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity])),
-            'voigt': (np.concatenate([centers_dev_lb, amp_lower, width_lower, width_lower]), np.concatenate([centers_dev_ub, infinity, infinity, infinity]))
+            'gauss': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity]).T.flatten().tolist()),
+            'lorentz': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity])).T.flatten().tolist(),
+            'voigt': (np.array([centers_dev_lb, amp_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity, infinity]).T.flatten().tolist())
         }
         
         for approximator in approximators_dict:
