@@ -423,15 +423,16 @@ def complex_fitting(
             'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
         }
 
-        centers_dev_ub = centers_i + allowed_dev
-        centers_dev_lb = centers_i - allowed_dev
-        amp_lower = np.full(n_peaks_i, 1e-8)
+        centers_lb = centers_i - allowed_dev
+        centers_ub = centers_i + allowed_dev
+        amp_lb = amplitudes_i * (1 - peak_rtol)
+        amp_ub = amplitudes_i * (1 + peak_rtol)
         width_lower = np.full(n_peaks_i, 0.5)
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
-            'gauss': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity]).T.flatten().tolist()),
-            'lorentz': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity]).T.flatten().tolist()),
-            'voigt': (np.array([centers_dev_lb, amp_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity, infinity]).T.flatten().tolist())
+            'gauss': (np.array([centers_lb, amp_lb, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity]).T.flatten().tolist()),
+            'lorentz': (np.array([centers_lb, amp_lb, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity]).T.flatten().tolist()),
+            'voigt': (np.array([centers_lb, amp_lb, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, amp_ub, infinity, infinity]).T.flatten().tolist())
         }
         
         for approximator in approximators_dict:
@@ -465,7 +466,7 @@ def complex_fitting(
             plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
             plt.ylabel('Signal amplitude')
             plt.xlabel('Wavenumbers [$cm^{-1}$]')
-            plt.title('Bound: {0} to {1} [$cm^{-1}$]'.format(x_lb, x_ub))
+            plt.title('Bound: ' + str(x_lb) + ' to ' + str(x_ub) + ' [$cm^{-1}$]')
             plt.legend()
             plt.show()
 
