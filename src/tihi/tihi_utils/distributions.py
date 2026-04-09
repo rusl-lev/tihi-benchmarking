@@ -353,6 +353,16 @@ approximators_dict = {
 }
 
 
+def reshape_params(params, approximator):
+    if isinstance(approximator, GaussianFitter) or isinstance(approximator, LorentzianFitter):
+        num_params = 3
+    else:
+        num_params = 4
+    params = params.tolist()
+    params = [params[i:i + num_params] for i in range(0, len(params), num_params)]
+    return np.array(params)
+
+
 def complex_fitting(
     data: np.ndarray, 
     peaks: np.ndarray, 
@@ -430,7 +440,7 @@ def complex_fitting(
         
         approximation_i = bound_approximator.results
         final_approximation[:,1] += approximation_i
-        params_i = bound_approximator.params
+        params_i = reshape_params(bound_approximator.params)
         output_parameters.append(params_i)
         
         if verbose:
@@ -442,8 +452,8 @@ def complex_fitting(
             print()
             axs[i].plot(x_masked, y_masked, label="Spectrum")
             axs[i].plot(x_masked, approximation_i[mask], label="Fit")
-            axs[i].plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks")
-            axs[i].plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks")
+            axs[i].plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
+            axs[i].plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
             axs[i].set_ylabel('Signal amplitude')
     if verbose:
         axs[-1].plot(x_vals, y_vals, label="Spectrum")
