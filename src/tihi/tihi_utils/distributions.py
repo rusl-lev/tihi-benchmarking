@@ -393,7 +393,7 @@ def complex_fitting(
         print(f'Bounds array: ', spec_bounds)
         print(f'X values: {x_vals}')
         print()
-        fig, axs = plt.subplots(spec_bounds.shape[0], 1, figsize=(10, 20))
+        fig, axs = plt.subplots(spec_bounds.shape[0]-1, 1, figsize=(10, 20))
 
     for i in range(spec_bounds.shape[0]-1):
         x_ub = spec_bounds[i+1]
@@ -459,10 +459,14 @@ def complex_fitting(
             axs[i].plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
             axs[i].plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
             axs[i].set_ylabel('Signal amplitude')
+            axs[i].legend()
+    
     if verbose:
-        axs[-1].plot(x_vals, y_vals, label="Spectrum")
-        axs[-1].plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
-        axs[-1].set_xlabel('Wavenumbers [$cm^{-1}$]')
+        plt.show()
+        fig = plt.figure(figsize=(10,10))
+        plt.plot(x_vals, y_vals, label="Spectrum")
+        plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
+        plt.set_xlabel('Wavenumbers [$cm^{-1}$]')
         plt.tight_layout()
         plt.legend()
         plt.show()
