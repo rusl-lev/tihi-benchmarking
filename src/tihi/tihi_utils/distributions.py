@@ -308,11 +308,14 @@ class VoigtFitter():
         :param lorentz_width (float) : Lorentzian component width of the Voigt profile.
         :return (ndarray) : Calculated Voigt profile values.
         """
-        # amplitude = amplitude * (-1.0)
         sigma = gauss_width / np.sqrt(2 * np.log(2))
-        gamma = lorentz_width / 2
+        gamma = lorentz_width / 2.0
+        
         z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
-        return amplitude * np.real(wofz(z)).astype(float) / (sigma * np.sqrt(2 * np.pi) + 1e-20)
+        real_part = np.real(wofz(z))
+        norm = sigma * np.sqrt(2 * np.pi)
+        profile = amplitude * real_part / norm
+        return profile
 
     def voigt_sum(self, x, params):
         """
