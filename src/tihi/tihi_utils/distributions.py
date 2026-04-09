@@ -314,7 +314,7 @@ class VoigtFitter():
         z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
         real_part = np.real(wofz(z))
         norm = sigma * np.sqrt(2 * np.pi)
-        profile = amplitude * real_part / norm
+        profile = amplitude * real_part / np.max(real_part)
         return profile
 
     def voigt_sum(self, x, params):
