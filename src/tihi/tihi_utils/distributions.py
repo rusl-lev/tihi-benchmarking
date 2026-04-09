@@ -427,7 +427,7 @@ def complex_fitting(
         infinity = np.full(n_peaks_i, np.inf)
         bounds_dict = {
             'gauss': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity]).T.flatten().tolist()),
-            'lorentz': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity])).T.flatten().tolist(),
+            'lorentz': (np.array([centers_dev_lb, amp_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity]).T.flatten().tolist()),
             'voigt': (np.array([centers_dev_lb, amp_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_dev_ub, infinity, infinity, infinity]).T.flatten().tolist())
         }
         
