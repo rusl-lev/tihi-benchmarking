@@ -770,7 +770,7 @@ class ComplexFitterFull():
             self.final_approximation[:,1] += approximation_i
             self.final_params.append(params_i)
     
-        residual = self.y_vals - self.final_approximation if residual_type == 'default' else np.log10(self.y_vals) - np.log10(self.final_approximation)
+        residual = self.y_vals - self.final_approximation[:,1] if residual_type == 'default' else np.log10(self.y_vals) - np.log10(self.final_approximation[:,1])
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
         
         return residual
