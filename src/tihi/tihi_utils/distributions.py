@@ -782,6 +782,7 @@ class ComplexFitterFull():
             peaks_only_initial = np.array([param[:2] for param in initial_params_joined])
             print(f'Fitter Function – Iteration no. {self.iterations_distr}')
             print('--------------------------')
+            print(f'Input parameters  : {params}')
             print(f'RMSD              : {self.rmsd}')
             print(f'Approximators     : {self.distributions}')
             print(f'Reshuffled bounds : {bounds_numbered}')
