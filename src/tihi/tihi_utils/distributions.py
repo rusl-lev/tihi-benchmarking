@@ -4,9 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional, Tuple
 
+state_scope_map = {
+    'init': 'bounded',
+    'refit': 'full'
+}
 
 class GaussianFitter():
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
         """
         Gaussian peak fitting class.
         
@@ -33,10 +37,13 @@ class GaussianFitter():
         self.output_params = []
         self.results = np.empty(self.full_x_vals.shape[0])
         self.error = 0
+        self.spec_rest = spec_rest
+        self.residual_scope = state_scope_map[state]
+        self.residual_type = residual
                 
-        self.approximator(max_iter, residual)
+        self.approximator(max_iter)
         
-    def approximator(self, max_iter, residual):
+    def approximator(self, max_iter):
         """
         Perform Gaussian fitting using least squares optimization.
         
@@ -44,28 +51,18 @@ class GaussianFitter():
         :return error (float) : Mean absolute error of the fitting.
         :Notes : Uses soft L1 loss and bounds parameters to constrain optimization.
         """
-        if residual == 'default':
-            self.params = least_squares(self.residual,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
-        elif residual == 'log':
-            self.params = least_squares(self.residual_log,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual_log(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
+        self.params = least_squares(self.residual,
+                            self.params, args=(self.x_vals, self.y_vals, self.residual_scope, self.residual_type),
+                            bounds=self.bounds,
+                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
+                            f_scale=0.1, max_nfev=max_iter).x
+        error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
+        print("The error for this run is: ", error)
+        self.error = error
 
         print(self.params)
         # self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
+        self.results = self.gaussian_sum(self.full_x_vals, self.params)
         
         return error
     
@@ -93,10 +90,10 @@ class GaussianFitter():
         """
         params = params.flatten().tolist()
         params = [params[i:i + 3] for i in range(0, len(params), 3)]
-        self.decompositions = [self.gaussian(x, center, amp, sigma) for center, amp, sigma in params]
-        return np.sum(self.decompositions, axis=0)
+        decompositions = [self.gaussian(x, center, amp, sigma) for center, amp, sigma in params]
+        return np.sum(decompositions, axis=0)
 
-    def residual(self, params, x_vals, y_vals):
+    def residual(self, params, x_vals, y_vals, scope, type):
         """
         Calculate residual between data and Gaussian fit.
         
@@ -105,18 +102,9 @@ class GaussianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return y_vals - self.gaussian_sum(x_vals, params)
-
-    def residual_log(self, params, x_vals, y_vals):
-        """
-        Calculate residual between data and Gaussian fit.
-        
-        :param params (ndarray) : Array of parameters for Gaussian functions.
-        :param x_vals (ndarray) : X values of the data.
-        :param y_vals (ndarray) : Y values of the data.
-        :return (ndarray) : Residual values.
-        """
-        return np.log10(y_vals) - np.log10(self.gaussian_sum(x_vals, params))
+        fit = self.gaussian_sum(x_vals, params) if self.residual_scope == 'full' else self.gaussian_sum(x_vals, params) + self.spec_rest
+        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        return residual
 
 
 class LorentzianFitter():
@@ -135,7 +123,7 @@ class LorentzianFitter():
     :attribute start_params (list) : Flattened list of initial parameters.
     :attribute decompositions (list) : List to store individual Lorentzian functions.
     """
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
 
         self.full_x_vals = full_x_vals
         self.x_vals = x_vals
@@ -147,10 +135,13 @@ class LorentzianFitter():
         self.output_params = []
         self.results = np.empty(self.full_x_vals.shape[0])
         self.error = 0
+        self.spec_rest = spec_rest
+        self.residual_scope = state_scope_map[state]
+        self.residual_type = residual
                 
-        self.approximator(max_iter, residual)
+        self.approximator(max_iter)
         
-    def approximator(self, max_iter, residual):
+    def approximator(self, max_iter):
         """
         Perform Lorentzian fitting using least squares optimization.
         
@@ -158,28 +149,18 @@ class LorentzianFitter():
         :return error (float) : Mean absolute error of the fitting.
         :Notes : Uses soft L1 loss and bounds parameters to constrain optimization.
         """
-        if residual == 'default':
-            self.params = least_squares(self.residual,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
-        elif residual == 'log':
-            self.params = least_squares(self.residual_log,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual_log(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
+        self.params = least_squares(self.residual,
+                            self.params, args=(self.x_vals, self.y_vals, self.residual_scope, self.residual_type),
+                            bounds=self.bounds,
+                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
+                            f_scale=0.1, max_nfev=max_iter).x
+        error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
+        print("The error for this run is: ", error)
+        self.error = error
 
         print(self.params)
         # self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
+        self.results = self.lorentzian_sum(self.full_x_vals, self.params)
         
         return error
     
@@ -211,7 +192,7 @@ class LorentzianFitter():
         decompositions = [self.lorentzian(x, centre, amp, gamma) for centre, amp, gamma in params]
         return np.sum(decompositions, axis=0)
 
-    def residual(self, params, x_vals, y_vals):
+    def residual(self, params, x_vals, y_vals, scope, type):
         """
         Calculate residual between data and Lorentzian fit.
         
@@ -220,21 +201,13 @@ class LorentzianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return y_vals - self.lorentzian_sum(x_vals, params)
-    
-    def residual_log(self, params, x_vals, y_vals):
-        """
-        Calculate residual between data and Lorentzian fit.
-        
-        :param params (ndarray) : Array of parameters for Lorentzian functions.
-        :param x_vals (ndarray) : X values of the data.
-        :param y_vals (ndarray) : Y values of the data.
-        :return (ndarray) : Residual values.
-        """
-        return np.log10(y_vals) - np.log10(self.lorentzian_sum(x_vals, params))
+        fit = self.lorentzian_sum(x_vals, params) if self.residual_scope == 'full' else self.lorentzian_sum(x_vals, params) + self.spec_rest
+        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        return residual
+
     
 class VoigtFitter():
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
         """
         Voigt peak fitting class.
         
@@ -261,10 +234,13 @@ class VoigtFitter():
         self.output_params = []
         self.results = np.empty(self.full_x_vals.shape[0])
         self.error = 0
+        self.spec_rest = spec_rest
+        self.residual_scope = state_scope_map[state]
+        self.residual_type = residual
                 
-        self.approximator(max_iter, residual)
+        self.approximator(max_iter)
         
-    def approximator(self, max_iter, residual):
+    def approximator(self, max_iter):
         """
         Perform Voigt fitting using least squares optimization.
         
@@ -272,28 +248,18 @@ class VoigtFitter():
         :return error (float) : Mean absolute error of the fitting.
         :Notes : Uses soft L1 loss and bounds parameters to constrain optimization.
         """
-        if residual == 'default':
-            self.params = least_squares(self.residual,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
-        elif residual == 'log':
-            self.params = least_squares(self.residual_log,
-                                self.params, args=(self.x_vals, self.y_vals),
-                                bounds=self.bounds,
-                                ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                                f_scale=0.1, max_nfev=max_iter).x
-            error = np.mean(np.abs(self.residual_log(self.params, self.x_vals, self.y_vals)))
-            print("the error for this run is: ", error)
-            self.error = error
+        self.params = least_squares(self.residual,
+                            self.params, args=(self.x_vals, self.y_vals, self.residual_scope, self.residual_type),
+                            bounds=self.bounds,
+                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
+                            f_scale=0.1, max_nfev=max_iter).x
+        error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
+        print("The error for this run is: ", error)
+        self.error = error
 
         print(self.params)
         # self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
-        self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
+        self.results = self.voigt_sum(self.full_x_vals, self.params)
         
         return error
     
@@ -327,10 +293,10 @@ class VoigtFitter():
         """
         params = params.tolist()
         params = [params[i:i + 4] for i in range(0, len(params), 4)]
-        self.decompositions = [self.voigt(x, centre, amp, gw, lw) for centre, amp, gw, lw in params]
-        return np.sum(self.decompositions, axis=0)
+        decompositions = [self.voigt(x, centre, amp, gw, lw) for centre, amp, gw, lw in params]
+        return np.sum(decompositions, axis=0)
 
-    def residual(self, params, x_vals, y_vals):
+    def residual(self, params, x_vals, y_vals, scope, type):
         """
         Calculate residual between data and Voigt fit.
         
@@ -339,149 +305,486 @@ class VoigtFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        return y_vals - self.voigt_sum(x_vals, params)
-
-    def residual_log(self, params, x_vals, y_vals):
-        """
-        Calculate residual between data and Lorentzian fit.
-        
-        :param params (ndarray) : Array of parameters for Lorentzian functions.
-        :param x_vals (ndarray) : X values of the data.
-        :param y_vals (ndarray) : Y values of the data.
-        :return (ndarray) : Residual values.
-        """
-        return np.log10(y_vals) - np.log10(self.voigt_sum(x_vals, params))
+        fit = self.voigt_sum(x_vals, params) if self.residual_scope == 'full' else self.voigt_sum(x_vals, params) + self.spec_rest
+        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        return residual
 
 
-approximators_dict = {
-    'gauss': GaussianFitter,
-    'lorentz': LorentzianFitter,
-    'voigt': VoigtFitter
-}
-
-
-def reshape_params(params, approximator):
-    if isinstance(approximator, GaussianFitter) or isinstance(approximator, LorentzianFitter):
-        num_params = 3
-    else:
-        num_params = 4
-    params = params.tolist()
-    params = [params[i:i + num_params] for i in range(0, len(params), num_params)]
-    return np.array(params)
-
-
-def complex_fitting(
-    data: np.ndarray, 
-    peaks: np.ndarray, 
-    spec_bounds: np.ndarray, 
-    peak_rtol: Optional[float] = 5e-02, 
-    max_iter: Optional[int] = 100,
-    residual: Optional[str] = 'default',
-    verbose: bool = False
-) -> Tuple[np.ndarray, list, float]:
+# def complex_fitting(
+#     data: np.ndarray, 
+#     peaks: np.ndarray, 
+#     spec_bounds: np.ndarray, 
+#     peak_rtol: Optional[float] = 5e-02, 
+#     max_iter: Optional[int] = 100,
+#     residual: Optional[str] = 'default',
+#     verbose: bool = False
+# ) -> Tuple[np.ndarray, list, float]:
     
-    x_vals = data[:,0]
-    y_vals = data[:,1]
-    mask_outside = (x_vals >= 400) & (x_vals <= 3500)
-    x_vals = x_vals[mask_outside]
-    y_vals = y_vals[mask_outside]
-    final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+#     x_vals = data[:,0]
+#     y_vals = data[:,1]
+#     mask_outside = (x_vals >= 400) & (x_vals <= 3500)
+#     x_vals = x_vals[mask_outside]
+#     y_vals = y_vals[mask_outside]
+#     final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
                     
-    # initial parameters
-    centers = peaks[:,0]
-    amplitudes = peaks[:,1]
-    lorentz_widths = np.full_like(amplitudes, 15)
-    gauss_widths = np.full_like(amplitudes, 15)
-    output_parameters = []
+#     # initial parameters
+#     centers = peaks[:,0]
+#     amplitudes = peaks[:,1]
+#     lorentz_widths = np.full_like(amplitudes, 15)
+#     gauss_widths = np.full_like(amplitudes, 15)
+#     output_parameters = []
     
-    if verbose:
-        print(f'Shape of the bounds array: ', spec_bounds.shape)
-        print(f'Bounds array: ', spec_bounds)
-        print(f'X values: {x_vals}')
-        print()
+#     if verbose:
+#         print(f'Shape of the bounds array: ', spec_bounds.shape)
+#         print(f'Bounds array: ', spec_bounds)
+#         print(f'X values: {x_vals}')
+#         print()
 
-    for i in range(spec_bounds.shape[0]-1):
-        x_ub = spec_bounds[i+1]
-        x_lb = spec_bounds[i]
+#     for i in range(spec_bounds.shape[0]-1):
+#         x_ub = spec_bounds[i+1]
+#         x_lb = spec_bounds[i]
+#         allowed_dev = (x_ub - x_lb) * peak_rtol
+#         peak_mask = (centers >= x_lb) & (centers < x_ub)
+#         centers_i = centers[peak_mask]
+#         n_peaks_i = centers_i.shape[0]
+#         amplitudes_i = amplitudes[peak_mask]
+#         lorentz_widths_i = lorentz_widths[peak_mask]
+#         gauss_widths_i = gauss_widths[peak_mask]
+#         # peak_deviation_bound = ([(peaks - allowed_dev), 0, 0], [(peaks + allowed_dev), np.inf, np.inf])
+#         mask = (x_vals >= x_lb) & (x_vals <= x_ub)
+#         x_masked = x_vals[mask]
+#         y_masked = y_vals[mask]
+#         min_error = 1e10
+#         bound_approximator = None
+#         approximation_i = None
+#         params_i = None
+
+#         parameters_dict = {
+#             'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten().tolist(),
+#             'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten().tolist(),
+#             'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
+#         }
+
+#         centers_lb = centers_i - allowed_dev
+#         centers_ub = centers_i + allowed_dev
+#         amplitude_lower = np.full(n_peaks_i, 1e-10)
+#         amp_lb = amplitudes_i * (1 - peak_rtol)
+#         amp_ub = amplitudes_i * (1 + peak_rtol)
+#         width_lower = np.full(n_peaks_i, 0.5)
+#         infinity = np.full(n_peaks_i, np.inf)
+#         bounds_dict = {
+#             'gauss': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
+#             'lorentz': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
+#             'voigt': (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
+#         }
+        
+#         for approximator in approximators_dict:
+#             params = parameters_dict[approximator]
+#             bounds = bounds_dict[approximator]
+#             aprx = approximators_dict[approximator](x_vals, x_masked, y_masked, params, bounds, residual=residual, max_iter=max_iter, verbose=verbose)
+#             if min_error > aprx.error:
+#                 min_error = aprx.error
+#                 bound_approximator = aprx
+
+#         if verbose:
+#             print(f'Minimum error for bound ({x_lb}, {x_ub}) of {min_error} is produced by {bound_approximator}.')
+        
+#         approximation_i = bound_approximator.results
+#         final_approximation[:,1] += approximation_i
+#         params_i = reshape_params(bound_approximator.params, bound_approximator)
+#         output_parameters.append(params_i)
+        
+#         if verbose:
+#             print(f'Lower bound: {x_lb}; upper bound: {x_ub}')
+#             print(f'X masked: {x_masked}')
+#             print(f'Y masked: {y_masked}')
+#             print(f'Minimum error of {min_error} for the bound is produced by {bound_approximator}.')
+#             print(f'Paramerers for the bound: ', params_i)
+#             print()
+#             fig = plt.figure(figsize=(10, 5))
+#             plt.plot(x_masked, y_masked, label="Spectrum")
+#             plt.plot(x_masked, approximation_i[mask], label="Fit")
+#             plt.plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
+#             plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
+#             plt.ylabel('Signal amplitude')
+#             plt.xlabel('Wavenumbers [$cm^{-1}$]')
+#             plt.title('Bound: ' + str(x_lb) + ' to ' + str(x_ub) + ' [$cm^{-1}$]')
+#             plt.legend()
+#             plt.show()
+    
+#     if verbose:
+#         fig = plt.figure(figsize=(10,10))
+#         plt.plot(x_vals, y_vals, label="Spectrum")
+#         plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
+#         plt.xlabel('Wavenumbers [$cm^{-1}$]')
+#         plt.ylabel('Signal amplitude')
+#         plt.tight_layout()
+#         plt.legend()
+#         plt.show()
+
+#     rmsd = np.sqrt(np.mean(((final_approximation[:,1] - y_vals) / y_vals) ** 2))
+
+#     return final_approximation, output_parameters, rmsd
+
+
+# def sum_subpeak_fitting(state, approximators_array, x_vals, y_vals, full_x_vals, parameters_arg, bounds_arg, peak_excluded_spec, args_dict):
+#     output_params = []
+#     if state == 'init':
+#         fits = np.zeros((len(approximators_array), full_x_vals.shape[0]))
+#         for i, approx in enumerate(approximators_array):
+#             params = parameters_arg[approx]
+#             bounds = bounds_arg[approx]
+#             approximator = approximators_dict[approx](full_x_vals, x_vals, y_vals, params, bounds, state, peak_excluded_spec, residual=args_dict['residual'], max_iter=args_dict['max_iter'], verbose=args_dict['verbose'])
+#             fits[i] = approximator.results
+#             output_params.append(reshape_params(approximator.params, approximator))
+#         return fits, output_params
+#     else:
+#         sum_fits = np.zeros_like(full_x_vals)
+#         for i, approx in enumerate(approximators_array):
+#             params = parameters_arg[i]
+#             bounds = bounds_arg[i]
+#             approximator = approx(full_x_vals, x_vals, y_vals, params, bounds, state, peak_excluded_spec, residual=args_dict['residual'], max_iter=args_dict['max_iter'], verbose=args_dict['verbose'])
+#             sum_fits += approximator.results
+#             output_params.append(reshape_params(approximator.params, approximator))
+#         return sum_fits, output_params
+
+
+# def construct_bounds(approximators, params, allowed_dev):
+#     output_bounds = []
+#     for param in params:
+#         num_params = len(params)
+#         center_lb = params[0] - allowed_dev
+#         center_ub = params[0] + allowed_dev
+#         arr_lower = [center_lb, 1e-10] + [0.5] * (num_params - 2)
+#         arr_upper = [center_ub] + [np.inf] * (num_params - 1)
+#         output_bounds.append((arr_lower, arr_upper))
+#     return output_bounds
+
+
+# def residual_complex_fitting(params, x_vals, y_vals, spec_bounds, centers, amplitudes, lorentz_widths, gauss_widths, args_dict):
+#     distributions = [list(approximators_dict.keys())[distr] for distr in params]
+#     initial_approximation = np.zeros((centers.shape[0], x_vals.shape[0]))
+#     final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+#     peak_rtol = args_dict['peak_rtol']
+#     initial_params = []
+#     final_params = []
+#     bounds_numbered = np.arange(spec_bounds.shape[0]-1, dtype=np.int_)
+#     approximators_grouped = []
+#     residual_type = args_dict['residual']
+    
+#     for i in bounds_numbered:
+#         x_ub = spec_bounds[i+1]
+#         x_lb = spec_bounds[i]
+#         allowed_dev = (x_ub - x_lb) * peak_rtol
+#         peak_mask = (centers >= x_lb) & (centers < x_ub)
+#         mask = (x_vals >= x_lb) & (x_vals <= x_ub)
+#         center_i = centers[peak_mask]
+#         n_peaks_i = centers_i.shape[0]
+#         amplitudes_i = amplitudes[peak_mask]
+#         lorentz_widths_i = lorentz_widths[peak_mask]
+#         gauss_widths_i = gauss_widths[peak_mask]
+#         x_masked = x_vals[mask]
+#         y_masked = y_vals[mask]
+#         approximators = distributions[peak_mask]
+#         approximators_grouped.append(approximators)
+#         min_error = 1e10
+
+#         parameters_dict = {
+#             'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten().tolist(),
+#             'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten().tolist(),
+#             'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
+#         }
+
+#         centers_lb = centers_i - allowed_dev
+#         centers_ub = centers_i + allowed_dev
+#         amplitude_lower = np.full(n_peaks_i, 1e-10)
+#         amp_lb = amplitudes_i * (1 - peak_rtol)
+#         amp_ub = amplitudes_i * (1 + peak_rtol)
+#         width_lower = np.full(n_peaks_i, 0.5)
+#         infinity = np.full(n_peaks_i, np.inf)
+#         gauss_lorentz_bounds = (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist())
+#         voigt_bounds = (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
+        
+#         bounds_dict = {
+#             'gauss': gauss_lorentz_bounds,
+#             'lorentz': gauss_lorentz_bounds,
+#             'voigt': voigt_bounds
+#         }
+
+#         fits_i, params_i = sum_subpeak_fitting('init', approximators, x_masked, y_masked, x_vals, parameters_dict, bounds_dict, args_dict)
+#         initial_approximation[peak_mask] += fits_i
+#         initial_params.append(params_i)
+
+#     rng = np.random.default_rng()
+#     rng.shuffle(bounds_numbered)
+#     for i in bounds_numbered:
+#         parameters = initial_params[i]
+#         approximators = approximators_grouped[i]
+#         x_ub = spec_bounds[i+1]
+#         x_lb = spec_bounds[i]
+#         allowed_dev = (x_ub - x_lb) * peak_rtol
+#         peak_mask = (centers >= x_lb) & (centers < x_ub)
+#         mask = (x_vals >= x_lb) & (x_vals <= x_ub)
+#         x_masked = x_vals[mask]
+#         y_masked = y_vals[mask]
+#         bounds = construct_bounds(approximators, parameters, allowed_dev)
+#         fit_summation_mask = np.fill(initial_approximation.shape[0], True)
+#         fit_summation_mask[i] = False
+#         fit_peak_excluded = np.sum(initial_approximation[fit_summation_mask], axis=0)
+
+#         approximation_i, params_i = sum_subpeak_fitting('refit', approximators, x_masked, y_masked, x_vals, parameters, bounds, fit_peak_excluded, args_dict)
+#         final_approximation[:,1] += approximation_i
+#         final_params.append(params_i)
+
+#     residual = y_vals - final_approximation if residual_type == 'default' else np.log10(y_vals) - np.log10(final_approximation)
+    
+#     return residual
+
+# def complex_fitting_full(
+#     data: np.ndarray, 
+#     peaks: np.ndarray, 
+#     spec_bounds: np.ndarray, 
+#     peak_rtol: Optional[float] = 5e-02, 
+#     max_iter: Optional[int] = 100,
+#     residual: Optional[str] = 'default',
+#     verbose: bool = False,
+#     seed: int = 42
+# ) -> Tuple[np.ndarray, list, float]:
+    
+#     x_vals = data[:,0]
+#     y_vals = data[:,1]
+#     mask_outside = (x_vals >= 400) & (x_vals <= 3500)
+#     x_vals = x_vals[mask_outside]
+#     y_vals = y_vals[mask_outside]
+#     # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+                    
+#     # initial parameters
+#     centers = peaks[:,0]
+#     amplitudes = peaks[:,1]
+#     lorentz_widths = np.full_like(amplitudes, 15)
+#     gauss_widths = np.full_like(amplitudes, 15)
+#     rng = np.random.default_rng(seed=seed)
+#     distr_sequence_init = rng.integers(0, 3, size=peaks.shape[0])
+#     output_parameters = []
+#     args_dict = {
+#         'peak_rtol': peak_rtol, 
+#         'max_iter': max_iter,
+#         'residual': residual,
+#         'verbose': verbose
+#     }
+
+    
+
+#     distr_sequence_out = least_squares(residual_complex_fitting,
+#                             distr_sequence_init, args=(x_vals, y_vals, spec_bounds, centers, amplitudes, lorentz_widths, gauss_widths, args_dict),
+#                             bounds=(0, 2),
+#                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
+#                             f_scale=0.1, max_nfev=max_iter).x
+
+    
+    
+#     if verbose:
+#         print(f'Shape of the bounds array: ', spec_bounds.shape)
+#         print(f'Bounds array: ', spec_bounds)
+#         print(f'X values: {x_vals}')
+#         print()
+    
+    
+#     if verbose:
+#         fig = plt.figure(figsize=(10,10))
+#         plt.plot(x_vals, y_vals, label="Spectrum")
+#         plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
+#         plt.xlabel('Wavenumbers [$cm^{-1}$]')
+#         plt.ylabel('Signal amplitude')
+#         plt.tight_layout()
+#         plt.legend()
+#         plt.show()
+
+#     rmsd = np.sqrt(np.mean(((final_approximation[:,1] - y_vals) / y_vals) ** 2))
+
+#     return final_approximation, output_parameters, rmsd
+
+
+class ComplexFitterFull():
+    
+    def __init__(
+        self, 
+        data: np.ndarray, 
+        peaks: np.ndarray, 
+        spec_bounds: np.ndarray, 
+        peak_rtol: Optional[float] = 5e-02, 
+        max_iter: Optional[int] = 100,
+        residual: Optional[str] = 'default',
+        verbose: bool = False,
+        seed: int = 42
+    ):
+
+        self.args_dict = {
+            'peak_rtol': peak_rtol, 
+            'max_iter': max_iter,
+            'residual': residual,
+            'verbose': verbose
+        }
+        
+        self.approximators_dict = {
+            'gauss': GaussianFitter,
+            'lorentz': LorentzianFitter,
+            'voigt': VoigtFitter
+        }
+        
+        self.x_vals = data[:,0]
+        self.y_vals = data[:,1]
+        mask_outside = (self.x_vals >= 400) & (self.x_vals <= 3500)
+        self.x_vals = self.x_vals[mask_outside]
+        self.y_vals = self.y_vals[mask_outside]
+        # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+                        
+        # initial parameters
+        self.centers = peaks[:,0]
+        self.amplitudes = peaks[:,1]
+        self.lorentz_widths = np.full_like(amplitudes, 15)
+        self.gauss_widths = np.full_like(amplitudes, 15)
+        rng = np.random.default_rng(seed=seed)
+        self.distr_sequence_init = rng.integers(0, 3, size=peaks.shape[0])
+        self.spec_bounds = spec_bounds
+        self.rmsd = 0
+
+        self.approximator(max_iter)
+        
+    def approximator(self, max_iter):
+        self.output_approx_params = least_squares(self.residual_complex_fitting,
+                            self.distr_sequence_init, args=(self.x_vals, self.y_vals),
+                            bounds=(0, 2),
+                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
+                            f_scale=0.1, max_nfev=max_iter).x
+        
+        return None
+
+    def infer_params_from_approx(self, approximator):
+        if isinstance(approximator, GaussianFitter) or isinstance(approximator, LorentzianFitter):
+            num_params = 3
+        else:
+            num_params = 4
+        return num_params
+    
+    def reshape_params(self, params, approximator):
+        num_params = self.infer_params_from_approx(approximator)
+        params = params.tolist()
+        params = [params[i:i + num_params] for i in range(0, len(params), num_params)]
+        return np.array(params)
+    
+    def construct_bounds(self, approximators, params, allowed_dev):
+        output_bounds = []
+        for param in params:
+            num_params = len(param)
+            center_lb = params[0] - allowed_dev
+            center_ub = params[0] + allowed_dev
+            arr_lower = [center_lb, 1e-10] + [0.5] * (num_params - 2)
+            arr_upper = [center_ub] + [np.inf] * (num_params - 1)
+            output_bounds.append((arr_lower, arr_upper))
+        return output_bounds
+
+    def sum_subpeak_fitting(self, state, approximators_array, x_masked, y_masked, parameters_arg, bounds_arg, peak_excluded_spec):
+        output_params = []
+        fits = np.zeros((len(approximators_array), self.x_vals.shape[0])) if state == 'init' else np.zeros_like(self.x_vals)
+        fitted_approximators = []
+        for i, approx in enumerate(approximators_array):
+            params = parameters_arg[approx] if state == 'init' else parameters_arg[i]
+            bounds = bounds_arg[approx] if state == 'init' else bounds_arg[i]
+            
+            approximator = self.approximators_dict[approx](
+                self.x_vals, x_masked, y_masked, 
+                params, bounds, state, peak_excluded_spec, 
+                residual=self.args_dict['residual'], max_iter=self.args_dict['max_iter'], verbose=self.args_dict['verbose']
+            )
+            output_params.append(self.reshape_params(approximator.params, approximator))
+
+            if state == 'init':
+                fits[i] = approximator.results
+            elif state == 'refit':
+                fits += approximator.results
+            
+            fitted_approximators.append(approximator)
+
+        return fits, output_params, fitted_approximators
+
+    def fit(self, state, i):
+        x_ub = self.spec_bounds[i+1]
+        x_lb = self.spec_bounds[i]
+        peak_rtol = self.args_dict['peak_rtol']
         allowed_dev = (x_ub - x_lb) * peak_rtol
-        peak_mask = (centers >= x_lb) & (centers < x_ub)
-        centers_i = centers[peak_mask]
-        n_peaks_i = centers_i.shape[0]
-        amplitudes_i = amplitudes[peak_mask]
-        lorentz_widths_i = lorentz_widths[peak_mask]
-        gauss_widths_i = gauss_widths[peak_mask]
-        # peak_deviation_bound = ([(peaks - allowed_dev), 0, 0], [(peaks + allowed_dev), np.inf, np.inf])
-        mask = (x_vals >= x_lb) & (x_vals <= x_ub)
-        x_masked = x_vals[mask]
-        y_masked = y_vals[mask]
-        min_error = 1e10
-        bound_approximator = None
-        approximation_i = None
-        params_i = None
+        peak_mask = (self.centers >= x_lb) & (self.centers < x_ub)
+        mask = (self.x_vals >= x_lb) & (self.x_vals <= x_ub)
+        x_masked = self.x_vals[mask]
+        y_masked = self.y_vals[mask]
+        approximators = self.distributions[peak_mask]
+        fit_peak_excluded = 0
 
-        parameters_dict = {
-            'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten().tolist(),
-            'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten().tolist(),
-            'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
-        }
-
-        centers_lb = centers_i - allowed_dev
-        centers_ub = centers_i + allowed_dev
-        amplitude_lower = np.full(n_peaks_i, 1e-10)
-        amp_lb = amplitudes_i * (1 - peak_rtol)
-        amp_ub = amplitudes_i * (1 + peak_rtol)
-        width_lower = np.full(n_peaks_i, 0.5)
-        infinity = np.full(n_peaks_i, np.inf)
-        bounds_dict = {
-            'gauss': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
-            'lorentz': (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist()),
-            'voigt': (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
-        }
+        # Construcing parameters depending on the fit state
+        if state == 'init':
+            centers_i = self.centers[peak_mask]
+            n_peaks_i = centers_i.shape[0]
+            amplitudes_i = self.amplitudes[peak_mask]
+            lorentz_widths_i = self.lorentz_widths[peak_mask]
+            gauss_widths_i = self.gauss_widths[peak_mask]
         
-        for approximator in approximators_dict:
-            params = parameters_dict[approximator]
-            bounds = bounds_dict[approximator]
-            aprx = approximators_dict[approximator](x_vals, x_masked, y_masked, params, bounds, residual=residual, max_iter=max_iter, verbose=verbose)
-            if min_error > aprx.error:
-                min_error = aprx.error
-                bound_approximator = aprx
-
-        if verbose:
-            print(f'Minimum error for bound ({x_lb}, {x_ub}) of {min_error} is produced by {bound_approximator}.')
+            parameters = {
+                'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten().tolist(),
+                'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten().tolist(),
+                'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
+            }
         
-        approximation_i = bound_approximator.results
-        final_approximation[:,1] += approximation_i
-        params_i = reshape_params(bound_approximator.params, bound_approximator)
-        output_parameters.append(params_i)
+            centers_lb = centers_i - allowed_dev
+            centers_ub = centers_i + allowed_dev
+            amplitude_lower = np.full(n_peaks_i, 1e-10)
+            # amp_lb = amplitudes_i * (1 - peak_rtol)
+            # amp_ub = amplitudes_i * (1 + peak_rtol)
+            width_lower = np.full(n_peaks_i, 0.5)
+            infinity = np.full(n_peaks_i, np.inf)
+            gauss_lorentz_bounds = (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist())
+            voigt_bounds = (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
+                
+            bounds = {
+                'gauss': gauss_lorentz_bounds,
+                'lorentz': gauss_lorentz_bounds,
+                'voigt': voigt_bounds
+            }
         
-        if verbose:
-            print(f'Lower bound: {x_lb}; upper bound: {x_ub}')
-            print(f'X masked: {x_masked}')
-            print(f'Y masked: {y_masked}')
-            print(f'Minimum error of {min_error} for the bound is produced by {bound_approximator}.')
-            print(f'Paramerers for the bound: ', params_i)
-            print()
-            fig = plt.figure(figsize=(10, 5))
-            plt.plot(x_masked, y_masked, label="Spectrum")
-            plt.plot(x_masked, approximation_i[mask], label="Fit")
-            plt.plot(centers_i, amplitudes_i, color='k', marker='x', label="Initial Peaks", linestyle='None')
-            plt.plot(params_i[:,0], params_i[:,1], color='r', marker='x', label="Fitted Peaks", linestyle='None')
-            plt.ylabel('Signal amplitude')
-            plt.xlabel('Wavenumbers [$cm^{-1}$]')
-            plt.title('Bound: ' + str(x_lb) + ' to ' + str(x_ub) + ' [$cm^{-1}$]')
-            plt.legend()
-            plt.show()
+        elif state == 'refit':
+            parameters = self.initial_params[i]
+            bounds = self.construct_bounds(approximators, parameters, allowed_dev)
+            fit_summation_mask = np.fill(self.initial_approximation.shape[0], True)
+            fit_summation_mask[i] = False
+            fit_peak_excluded = np.sum(self.initial_approximation[fit_summation_mask], axis=0)
     
-    if verbose:
-        fig = plt.figure(figsize=(10,10))
-        plt.plot(x_vals, y_vals, label="Spectrum")
-        plt.plot(final_approximation[:,0], final_approximation[:,1], label="Total Fit")
-        plt.xlabel('Wavenumbers [$cm^{-1}$]')
-        plt.ylabel('Signal amplitude')
-        plt.tight_layout()
-        plt.legend()
-        plt.show()
+        fits_i, params_i, fitted_approximators = self.sum_subpeak_fitting(state, approximators, x_masked, y_masked, parameters, bounds, fit_peak_excluded)
+        self.output_fitted_approximators[i] = fitted_approximators
+        
+        return fits_i, params_i, peak_mask
 
-    rmsd = np.sqrt(np.mean(((final_approximation[:,1] - y_vals) / y_vals) ** 2))
-
-    return final_approximation, output_parameters, rmsd
+    def residual_complex_fitting(self, params):
+        self.distributions = [list(self.approximators_dict.keys())[int(round(distr))] for distr in params]
+        self.initial_approximation = np.zeros((self.centers.shape[0], self.x_vals.shape[0]))
+        self.final_approximation = np.array([self.x_vals, np.zeros_like(self.y_vals)]).T
+        self.initial_params = []
+        self.final_params = []
+        bounds_numbered = np.arange(self.spec_bounds.shape[0]-1, dtype=np.int_)
+        residual_type = self.args_dict['residual']
+        self.output_fitted_approximators = np.empty_like(bounds_numbered, dtype=object)
+        
+        for i in bounds_numbered:
+            fits_i, params_i, peak_mask = self.fit('init', i)
+            self.initial_approximation[peak_mask] += fits_i
+            self.initial_params.append(params_i)
+    
+        rng = np.random.default_rng()
+        rng.shuffle(bounds_numbered)
+        for i in bounds_numbered:
+            approximation_i, params_i, _ = self.fit('refit', i)
+            self.final_approximation[:,1] += approximation_i
+            self.final_params.append(params_i)
+    
+        residual = self.y_vals - self.final_approximation if residual_type == 'default' else np.log10(self.y_vals) - np.log10(self.final_approximation)
+        self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
+        
+        return residual
