@@ -722,10 +722,10 @@ class ComplexFitterFull():
 
         # Construcing parameters depending on the fit state
         if state == 'init':
-            centers_i = self.centers[peak_mask]
-            amplitudes_i = self.amplitudes[peak_mask]
-            lorentz_widths_i = self.lorentz_widths[peak_mask]
-            gauss_widths_i = self.gauss_widths[peak_mask]
+            centers_i = self.centers[peak_mask].tolist()
+            amplitudes_i = self.amplitudes[peak_mask].tolist()
+            lorentz_widths_i = self.lorentz_widths[peak_mask].tolist()
+            gauss_widths_i = self.gauss_widths[peak_mask].tolist()
 
             parameters = [[center, amplitude] for center, amplitude in zip(centers_i, amplitudes_i)]
             for i, approximator in enumerate(approximators):
