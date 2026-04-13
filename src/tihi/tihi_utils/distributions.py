@@ -57,10 +57,10 @@ class GaussianFitter():
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
         error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
-        print("The error for this run is: ", error)
-        self.error = error
+        # print("The error for this run is: ", error)
+        # self.error = error
 
-        print(self.params)
+        # print(self.params)
         # self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
         self.results = self.gaussian_sum(self.full_x_vals, self.params)
         
@@ -155,10 +155,10 @@ class LorentzianFitter():
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
         error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
-        print("The error for this run is: ", error)
-        self.error = error
+        # print("The error for this run is: ", error)
+        # self.error = error
 
-        print(self.params)
+        # print(self.params)
         # self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
         self.results = self.lorentzian_sum(self.full_x_vals, self.params)
         
@@ -254,10 +254,10 @@ class VoigtFitter():
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
         error = np.mean(np.abs(self.residual(self.params, self.x_vals, self.y_vals, self.residual_scope, self.residual_type)))
-        print("The error for this run is: ", error)
-        self.error = error
+        # print("The error for this run is: ", error)
+        # self.error = error
 
-        print(self.params)
+        # print(self.params)
         # self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
         self.results = self.voigt_sum(self.full_x_vals, self.params)
         
@@ -648,6 +648,7 @@ class ComplexFitterFull():
         self.distr_sequence_init = rng.integers(0, 3, size=peaks.shape[0])
         self.spec_bounds = spec_bounds
         self.rmsd = 0
+        self.iterations_distr = 0
 
         self.approximator(max_iter)
         
@@ -749,6 +750,7 @@ class ComplexFitterFull():
         return fits_i, params_i, peak_mask
 
     def residual_complex_fitting(self, params):
+        self.iterations_distr += 1
         self.distributions = np.array([list(self.approximators_dict.keys())[int(round(distr))] for distr in params])
         self.initial_approximation = np.zeros((self.centers.shape[0], self.x_vals.shape[0]))
         self.final_approximation = np.array([self.x_vals, np.zeros_like(self.y_vals)]).T
@@ -772,5 +774,31 @@ class ComplexFitterFull():
     
         residual = self.y_vals - self.final_approximation[:,1] if residual_type == 'default' else np.log10(self.y_vals) - np.log10(self.final_approximation[:,1])
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
+
+        if self.args_dict['verbose']:
+            final_params_joined = [i.tolist() for i in j for j in self.final_params]
+            initial_params_joined = [i.tolist() for i in j for j in self.initial_params]
+            peaks_only_final = np.array([param[:2] for param in final_params_joined])
+            peaks_only_initial = np.array([param[:2] for param in initial_params_joined])
+            print(f'Fitter Function – Iteration no. {self.iterations_distr}')
+            print('--------------------------')
+            print(f'RMSD              : {self.rmsd}')
+            print(f'Approximators     : {self.distributions}')
+            print(f'Reshuffled bounds : {bounds_numbered}')
+            print(f'Initial parameters : ')
+            print(initial_params_joined)
+            print(f'Final parameters : ')
+            print(final_params_joined)
+            print()
+            fig = plt.figure(figsize=(10, 5))
+            plt.title('Fitting Results')
+            plt.plot(self.x_vals, self.y_vals, label='Reference spectrum')
+            plt.plot(self.x_vals, self.initial_approximation.sum(axis=0), label=f'Initial spectrum at {self.iterations_distr}. iteration')
+            plt.plot(self.final_approximation[:,0], self.final_approximation[:,1], label=f'Final spectrum at {self.iterations_distr}. iteration')
+            plt.plot(peaks_only_initial[:,0], peaks_only_initial[:,1], label="Initial Peaks", ls='None')
+            plt.plot(peaks_only_final[:,0], peaks_only_final[:,1], label="Final Peaks", ls='None')
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
         
         return residual
