@@ -776,8 +776,8 @@ class ComplexFitterFull():
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
 
         if self.args_dict['verbose']:
-            final_params_joined = [i.tolist() for i in j for j in self.final_params]
-            initial_params_joined = [i.tolist() for i in j for j in self.initial_params]
+            final_params_joined = [i.tolist() for j in self.final_params for i in j]
+            initial_params_joined = [i.tolist() for j in self.initial_params for i in j]
             peaks_only_final = np.array([param[:2] for param in final_params_joined])
             peaks_only_initial = np.array([param[:2] for param in initial_params_joined])
             print(f'Fitter Function – Iteration no. {self.iterations_distr}')
