@@ -730,11 +730,11 @@ class ComplexFitterFull():
             parameters = [[center, amplitude] for center, amplitude in zip(centers_i, amplitudes_i)]
             for i, approximator in enumerate(approximators):
                 if approximator == 'gauss':
-                    parameters[i] += gauss_widths_i[i]
+                    parameters[i] += [gauss_widths_i[i]]
                 elif approximator == 'lorentz':
-                    parameters[i] += lorentz_widths_i[i]
+                    parameters[i] += [lorentz_widths_i[i]]
                 else:
-                    parameters[i] += (gauss_widths_i[i] + lorentz_widths_i[i])
+                    parameters[i] += [gauss_widths_i[i], lorentz_widths_i[i]]
         
         elif state == 'refit':
             parameters = self.initial_params[i]
