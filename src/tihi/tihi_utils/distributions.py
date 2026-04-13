@@ -790,14 +790,21 @@ class ComplexFitterFull():
             print(f'Final parameters : ')
             print(final_params_joined)
             print()
-            fig = plt.figure(figsize=(10, 5))
+            fig, axs = plt.subplots(2, 1, figsize=(10, 5))
             plt.title('Fitting Results')
-            plt.plot(self.x_vals, self.y_vals, label='Reference spectrum')
-            plt.plot(self.x_vals, self.initial_approximation.sum(axis=0), label=f'Initial spectrum at {self.iterations_distr}. iteration')
-            plt.plot(self.final_approximation[:,0], self.final_approximation[:,1], label=f'Final spectrum at {self.iterations_distr}. iteration')
-            plt.plot(peaks_only_initial[:,0], peaks_only_initial[:,1], label="Initial Peaks", ls='None')
-            plt.plot(peaks_only_final[:,0], peaks_only_final[:,1], label="Final Peaks", ls='None')
-            plt.legend()
+            
+            axs[0].plot(self.x_vals, self.y_vals, label='Reference spectrum')
+            axs[0].plot(self.x_vals, self.initial_approximation.sum(axis=0), label=f'Initial spectrum at {self.iterations_distr}. iteration')
+            axs[0].plot(self.final_approximation[:,0], self.final_approximation[:,1], label=f'Final spectrum at {self.iterations_distr}. iteration')
+            axs[0].legend()
+            
+            axs[1].plot(self.x_vals, self.y_vals, label='Reference spectrum')
+            axs[1].plot(self.x_vals, self.initial_approximation.sum(axis=0), label=f'Initial spectrum at {self.iterations_distr}. iteration')
+            axs[1].plot(self.final_approximation[:,0], self.final_approximation[:,1], label=f'Final spectrum at {self.iterations_distr}. iteration')
+            axs[1].plot(peaks_only_initial[:,0], peaks_only_initial[:,1], label="Initial Peaks", color='k', marker='x', ls='None')
+            axs[1].plot(peaks_only_final[:,0], peaks_only_final[:,1], label="Final Peaks", color='r', marker='x', ls='None')
+            axs[1].legend()
+            
             plt.tight_layout()
             plt.show()
         
