@@ -697,7 +697,7 @@ class ComplexFitterFull():
                 params, bounds, state, peak_excluded_spec, 
                 residual=self.args_dict['residual'], max_iter=self.args_dict['max_iter'], verbose=self.args_dict['verbose']
             )
-            output_params.append(self.reshape_params(approximator.params, approximator))
+            output_params.append(approximator.params)
 
             if state == 'init':
                 fits[i] = approximator.results
