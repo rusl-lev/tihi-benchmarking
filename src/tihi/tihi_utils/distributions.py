@@ -673,7 +673,7 @@ class ComplexFitterFull():
         params = [params[i:i + num_params] for i in range(0, len(params), num_params)]
         return np.array(params)
     
-    def construct_bounds(self, approximators, params, allowed_dev):
+    def construct_bounds(self, params, allowed_dev):
         output_bounds = []
         for param in params:
             num_params = len(param)
@@ -689,8 +689,8 @@ class ComplexFitterFull():
         fits = np.zeros((len(approximators_array), self.x_vals.shape[0])) if state == 'init' else np.zeros_like(self.x_vals)
         fitted_approximators = []
         for i, approx in enumerate(approximators_array):
-            params = parameters_arg[approx] if state == 'init' else parameters_arg[i]
-            bounds = bounds_arg[approx] if state == 'init' else bounds_arg[i]
+            params = parameters_arg[i]
+            bounds = bounds_arg[i]
             
             approximator = self.approximators_dict[approx](
                 self.x_vals, x_masked, y_masked, 
@@ -723,40 +723,26 @@ class ComplexFitterFull():
         # Construcing parameters depending on the fit state
         if state == 'init':
             centers_i = self.centers[peak_mask]
-            n_peaks_i = centers_i.shape[0]
             amplitudes_i = self.amplitudes[peak_mask]
             lorentz_widths_i = self.lorentz_widths[peak_mask]
             gauss_widths_i = self.gauss_widths[peak_mask]
-        
-            parameters = {
-                'gauss': np.array([centers_i, amplitudes_i, gauss_widths_i]).T.flatten().tolist(),
-                'lorentz': np.array([centers_i, amplitudes_i, lorentz_widths_i]).T.flatten().tolist(),
-                'voigt': np.array([centers_i, amplitudes_i, gauss_widths_i, lorentz_widths_i]).T.flatten().tolist()
-            }
-        
-            centers_lb = centers_i - allowed_dev
-            centers_ub = centers_i + allowed_dev
-            amplitude_lower = np.full(n_peaks_i, 1e-10)
-            # amp_lb = amplitudes_i * (1 - peak_rtol)
-            # amp_ub = amplitudes_i * (1 + peak_rtol)
-            width_lower = np.full(n_peaks_i, 0.5)
-            infinity = np.full(n_peaks_i, np.inf)
-            gauss_lorentz_bounds = (np.array([centers_lb, amplitude_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity]).T.flatten().tolist())
-            voigt_bounds = (np.array([centers_lb, amplitude_lower, width_lower, width_lower]).T.flatten().tolist(), np.array([centers_ub, infinity, infinity, infinity]).T.flatten().tolist())
-                
-            bounds = {
-                'gauss': gauss_lorentz_bounds,
-                'lorentz': gauss_lorentz_bounds,
-                'voigt': voigt_bounds
-            }
+
+            parameters = [[center, amplitude] for center, amplitude in zip(centers_i, amplitudes_i)]
+            for i, approximator in enumerate(approximators):
+                if approximator == 'gauss':
+                    parameters[i] += gauss_widths_i[i]
+                elif approximator == 'lorentz':
+                    parameters[i] += lorentz_widths_i[i]
+                else:
+                    parameters[i] += (gauss_widths_i[i] + lorentz_widths_i[i])
         
         elif state == 'refit':
             parameters = self.initial_params[i]
-            bounds = self.construct_bounds(approximators, parameters, allowed_dev)
             fit_summation_mask = np.full(self.initial_approximation.shape[0], True)
             fit_summation_mask[i] = False
             fit_peak_excluded = np.sum(self.initial_approximation[fit_summation_mask], axis=0)
-    
+
+        bounds = self.construct_bounds(parameters, allowed_dev)
         fits_i, params_i, fitted_approximators = self.sum_subpeak_fitting(state, approximators, x_masked, y_masked, parameters, bounds, fit_peak_excluded)
         self.output_fitted_approximators[i] = fitted_approximators
         
