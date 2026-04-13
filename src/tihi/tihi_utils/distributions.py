@@ -677,8 +677,8 @@ class ComplexFitterFull():
         output_bounds = []
         for param in params:
             num_params = len(param)
-            center_lb = params[0] - allowed_dev
-            center_ub = params[0] + allowed_dev
+            center_lb = param[0] - allowed_dev
+            center_ub = param[0] + allowed_dev
             arr_lower = [center_lb, 1e-10] + [0.5] * (num_params - 2)
             arr_upper = [center_ub] + [np.inf] * (num_params - 1)
             output_bounds.append((arr_lower, arr_upper))
