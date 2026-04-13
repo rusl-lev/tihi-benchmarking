@@ -763,7 +763,7 @@ class ComplexFitterFull():
         return fits_i, params_i, peak_mask
 
     def residual_complex_fitting(self, params):
-        self.distributions = [list(self.approximators_dict.keys())[int(round(distr))] for distr in params]
+        self.distributions = np.array([list(self.approximators_dict.keys())[int(round(distr))] for distr in params])
         self.initial_approximation = np.zeros((self.centers.shape[0], self.x_vals.shape[0]))
         self.final_approximation = np.array([self.x_vals, np.zeros_like(self.y_vals)]).T
         self.initial_params = []
