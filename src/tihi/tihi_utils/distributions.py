@@ -642,8 +642,8 @@ class ComplexFitterFull():
         # initial parameters
         self.centers = peaks[:,0]
         self.amplitudes = peaks[:,1]
-        self.lorentz_widths = np.full_like(amplitudes, 15)
-        self.gauss_widths = np.full_like(amplitudes, 15)
+        self.lorentz_widths = np.full_like(self.amplitudes, 15)
+        self.gauss_widths = np.full_like(self.amplitudes, 15)
         rng = np.random.default_rng(seed=seed)
         self.distr_sequence_init = rng.integers(0, 3, size=peaks.shape[0])
         self.spec_bounds = spec_bounds
