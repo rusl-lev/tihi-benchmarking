@@ -528,7 +528,7 @@ class VoigtFitter():
 #         x_masked = x_vals[mask]
 #         y_masked = y_vals[mask]
 #         bounds = construct_bounds(approximators, parameters, allowed_dev)
-#         fit_summation_mask = np.fill(initial_approximation.shape[0], True)
+#         fit_summation_mask = np.full(initial_approximation.shape[0], True)
 #         fit_summation_mask[i] = False
 #         fit_peak_excluded = np.sum(initial_approximation[fit_summation_mask], axis=0)
 
@@ -753,7 +753,7 @@ class ComplexFitterFull():
         elif state == 'refit':
             parameters = self.initial_params[i]
             bounds = self.construct_bounds(approximators, parameters, allowed_dev)
-            fit_summation_mask = np.fill(self.initial_approximation.shape[0], True)
+            fit_summation_mask = np.full(self.initial_approximation.shape[0], True)
             fit_summation_mask[i] = False
             fit_peak_excluded = np.sum(self.initial_approximation[fit_summation_mask], axis=0)
     
