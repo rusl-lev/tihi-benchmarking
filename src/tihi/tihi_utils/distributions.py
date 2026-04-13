@@ -652,9 +652,9 @@ class ComplexFitterFull():
         self.approximator(max_iter)
         
     def approximator(self, max_iter):
+        
         self.output_approx_params = least_squares(self.residual_complex_fitting,
-                            self.distr_sequence_init, args=(self.x_vals, self.y_vals),
-                            bounds=(0, 2),
+                            self.distr_sequence_init, bounds=(0, 2),
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
         
