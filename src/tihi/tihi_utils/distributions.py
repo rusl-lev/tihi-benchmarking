@@ -846,7 +846,7 @@ class ComplexFitterLinearCombination():
         self.amplitudes = self.max_scaling(peaks[:,1], ref_data=data[:,1])
         self.lorentz_widths = np.full_like(self.amplitudes, 15)
         self.gauss_widths = np.full_like(self.amplitudes, 15)
-        self.weights_init = np.zeros(3)
+        self.weights_init = np.zeros(self.centers.shape[0] * 3)
         # self.spec_bounds = spec_bounds
         self.rmsd = 0
         self.iterations = 1
@@ -876,13 +876,13 @@ class ComplexFitterLinearCombination():
         zero_bound = np.zeros_like(self.centers)
         inf_bound = np.full_like(self.centers, np.inf)
 
-        gaussian_lorentzian_lb = np.array([center_lb, amplitude_lb, zero_bound]).T.flatten()
-        voigt_lb = np.array([center_lb, amplitude_lb, zero_bound, zero_bound]).T.flatten()
-        gaussian_lorentzian_ub = np.array([center_ub, amplitude_ub, inf_bound]).T.flatten()
-        voigt_ub = np.array([center_ub, amplitude_ub, inf_bound, inf_bound]).T.flatten()
-        weghts_lb = np.zeros_like(self.weights_init)
+        gaussian_lorentzian_lb = np.array([center_lb, zero_bound]).T.flatten()
+        voigt_lb = np.array([center_lb, zero_bound, zero_bound]).T.flatten()
+        gaussian_lorentzian_ub = np.array([center_ub, inf_bound]).T.flatten()
+        voigt_ub = np.array([center_ub, inf_bound, inf_bound]).T.flatten()
+        weights_lb = np.zeros_like(self.weights_init)
         weights_ub = np.full_like(self.weights_init, np.inf)
-        self.bounds = (np.concatenate([weghts_lb, gaussian_lorentzian_lb, gaussian_lorentzian_lb, voigt_lb]), np.concatenate([weights_ub, gaussian_lorentzian_ub, gaussian_lorentzian_ub, voigt_ub]))
+        self.bounds = (np.concatenate([weights_lb, amplitude_lb, gaussian_lorentzian_lb, gaussian_lorentzian_lb, voigt_lb]), np.concatenate([weights_ub, amplitude_ub, gaussian_lorentzian_ub, gaussian_lorentzian_ub, voigt_ub]))
         
         self.approximator(max_iter)
 
@@ -906,58 +906,58 @@ class ComplexFitterLinearCombination():
         return None
 
     def unpack_params(self, params):
-        num_peaks = self.centers.shape[0]
-        weights = softmax(params[:3])
-        gaussian = params[3:3+(num_peaks*3)]
-        lorentzian = params[3+(num_peaks*3):3+(num_peaks*3)+(num_peaks*3)]
-        voigt = params[3+(num_peaks*3)+(num_peaks*3):]
+        n = self.centers.shape[0]
+        w_start = 0
+        a_start = 3 * n
+        g_start = a_start + n
+        l_start = g_start + (n * 2)
+        v_start = l_start + (n * 2)
+        
+        weights = softmax(params[w_start:a_start].reshape(n, 3), axis=1)
+        amplitudes = params[a_start:g_start]
+        gaussian = params[g_start:l_start].reshape(n, 2)
+        lorentzian = params[l_start:v_start].reshape(n, 2)
+        voigt = params[v_start:].reshape(n, 3)
 
-        return weights, gaussian, lorentzian, voigt
+        return weights, amplitudes, gaussian, lorentzian, voigt
     
-    def gaussian(self, x, center, amplitude, gauss_width):
-        # amplitude = amplitude * (-1.0)
+    def gaussian(self, x, params):
+        center, gauss_width = params
         sigma = gauss_width / np.sqrt(2 * np.log(2))
-        return amplitude * np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
+        return np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
 
-    def gaussian_sum(self, x, params):
-        params = params.flatten().tolist()
-        params = [params[i:i + 3] for i in range(0, len(params), 3)]
-        decompositions = [self.gaussian(x, center, amp, sigma) for center, amp, sigma in params]
-        return np.sum(decompositions, axis=0)
-
-    def lorentzian(self, x, center, amplitude, lorentz_width):
+    def lorentzian(self, x, params):
+        center, lorentz_width = params
         gamma = lorentz_width / 2
-        return (amplitude * gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
+        return (gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
 
-    def lorentzian_sum(self, x, params):
-        params = params.tolist()
-        params = [params[i:i + 3] for i in range(0, len(params), 3)]
-        decompositions = [self.lorentzian(x, centre, amp, gamma) for centre, amp, gamma in params]
-        return np.sum(decompositions, axis=0)
-
-    def voigt(self, x, center, amplitude, gauss_width, lorentz_width):
+    def voigt(self, x, params):
+        center, gauss_width, lorentz_width = params
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         gamma = lorentz_width / 2.0
         
         z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
         real_part = np.real(wofz(z))
         norm = sigma * np.sqrt(2 * np.pi)
-        profile = amplitude * real_part / norm
+        profile = real_part / norm
         return profile
 
-    def voigt_sum(self, x, params):
-        params = params.tolist()
-        params = [params[i:i + 4] for i in range(0, len(params), 4)]
-        decompositions = [self.voigt(x, centre, amp, gw, lw) for centre, amp, gw, lw in params]
-        return np.sum(decompositions, axis=0)
-
-    def weighted_sum(self, x_vals, weights, gaussian, lorentzian, voigt):
-        return weights[0] * self.gaussian_sum(x_vals, gaussian) + weights[1] * self.lorentzian_sum(x_vals, lorentzian) + weights[2] * self.voigt_sum(x_vals, voigt)
+    def weighted_sum(self, x_vals, weights, amplitudes, gaussian, lorentzian, voigt):
+        weighted_sum = np.zeros_like(x_vals)
+        for i in range(weights.shape[0]):
+            weights_i = weights[i]
+            amplitude_i = amplitudes[i]
+            gaussian_i = gaussian[i]
+            lorentzian_i = lorentzian[i]
+            voigt_i = voigt[i]
+            weighted_sum += amplitude_i * (weights_i[0] * self.gaussian(x_vals, gaussian_i) + weights_i[1] * self.lorentzian(x_vals, lorentzian_i) + weights_i[2] * self.voigt(x_vals, voigt_i))
+        return weighted_sum
         
     def residual_fun(self, params):
-        weights, gaussian, lorentzian, voigt = self.unpack_params(params)
+        
+        weights, amplitudes, gaussian, lorentzian, voigt = self.unpack_params(params)
 
-        fit = self.weighted_sum(self.x_vals, weights, gaussian, lorentzian, voigt)
+        fit = self.weighted_sum(self.x_vals, weights, amplitudes, gaussian, lorentzian, voigt)
 
         residual = self.y_vals - fit if self.residual_type == 'default' else np.log10(self.y_vals) - np.log10(fit)
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
