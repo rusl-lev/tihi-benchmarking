@@ -965,7 +965,7 @@ class ComplexFitterLinearCombination():
             print(f'Fitter Function – Iteration no. {self.iterations}')
             print('--------------------------')
             print(f'Weights:')
-            print(f'Gaussian : {weights[0]} | Lorentzian : {weights[1]} | Voigt : {weights[2]}')
+            print(f'Gaussian : {weights[:,0]} | Lorentzian : {weights[:,1]} | Voigt : {weights[:,2]}')
             print(f'RMSD              : {self.rmsd}')
             print()
             fig = plt.figure(figsize=(10, 5))
