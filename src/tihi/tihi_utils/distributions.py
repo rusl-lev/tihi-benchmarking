@@ -961,7 +961,7 @@ class ComplexFitterLinearCombination():
         residual = self.y_vals - fit if self.residual_type == 'default' else np.log10(self.y_vals) - np.log10(fit)
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
 
-        if self.verbose:
+        if self.verbose and (self.iterations % 100 == 0):
             print(f'Fitter Function – Iteration no. {self.iterations}')
             print('--------------------------')
             print(f'Weights:')
