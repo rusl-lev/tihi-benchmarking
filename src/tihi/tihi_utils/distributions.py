@@ -10,7 +10,7 @@ state_scope_map = {
 }
 
 class GaussianFitter():
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, full_y_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
         """
         Gaussian peak fitting class.
         
@@ -28,6 +28,7 @@ class GaussianFitter():
         :attribute result (None) : Placeholder for fitting result.
         """
         self.full_x_vals = full_x_vals
+        self.full_y_vals = full_y_vals
         self.x_vals = x_vals
         self.y_vals = y_vals
                     
@@ -102,8 +103,9 @@ class GaussianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        fit = self.gaussian_sum(x_vals, params) if self.residual_scope == 'full' else self.gaussian_sum(x_vals, params) + self.spec_rest
-        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        fit = self.gaussian_sum(x_vals, params) if self.residual_scope == 'bounded' else self.gaussian_sum(self.full_x_vals, params) + self.spec_rest
+        reference = y_vals if self.residual_scope == 'bounded' else self.full_y_vals
+        residual = reference - fit if self.residual_type == 'default' else np.log10(reference) - np.log10(fit)
         return residual
 
 
@@ -123,9 +125,10 @@ class LorentzianFitter():
     :attribute start_params (list) : Flattened list of initial parameters.
     :attribute decompositions (list) : List to store individual Lorentzian functions.
     """
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, full_y_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
 
         self.full_x_vals = full_x_vals
+        self.full_y_vals = full_y_vals
         self.x_vals = x_vals
         self.y_vals = y_vals
                     
@@ -201,13 +204,14 @@ class LorentzianFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        fit = self.lorentzian_sum(x_vals, params) if self.residual_scope == 'full' else self.lorentzian_sum(x_vals, params) + self.spec_rest
-        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        fit = self.lorentzian_sum(x_vals, params) if self.residual_scope == 'bounded' else self.lorentzian_sum(self.full_x_vals, params) + self.spec_rest
+        reference = y_vals if self.residual_scope == 'bounded' else self.full_y_vals
+        residual = reference - fit if self.residual_type == 'default' else np.log10(reference) - np.log10(fit)
         return residual
 
     
 class VoigtFitter():
-    def __init__(self, full_x_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
+    def __init__(self, full_x_vals, full_y_vals, x_vals, y_vals, params, bounds, state, spec_rest=None, residual='default', max_iter=100, verbose=False):
         """
         Voigt peak fitting class.
         
@@ -225,6 +229,7 @@ class VoigtFitter():
         :attribute decompositions (list) : List to store individual Voigt functions.
         """
         self.full_x_vals = full_x_vals
+        self.full_y_vals = full_y_vals
         self.x_vals = x_vals
         self.y_vals = y_vals
                     
@@ -305,8 +310,9 @@ class VoigtFitter():
         :param y_vals (ndarray) : Y values of the data.
         :return (ndarray) : Residual values.
         """
-        fit = self.voigt_sum(x_vals, params) if self.residual_scope == 'full' else self.voigt_sum(x_vals, params) + self.spec_rest
-        residual = y_vals - fit if self.residual_type == 'default' else np.log10(y_vals) - np.log10(fit)
+        fit = self.voigt_sum(x_vals, params) if self.residual_scope == 'bounded' else self.voigt_sum(self.full_x_vals, params) + self.spec_rest
+        reference = y_vals if self.residual_scope == 'bounded' else self.full_y_vals
+        residual = reference - fit if self.residual_type == 'default' else np.log10(reference) - np.log10(fit)
         return residual
 
 
@@ -645,7 +651,7 @@ class ComplexFitterFull():
         self.lorentz_widths = np.full_like(self.amplitudes, 15)
         self.gauss_widths = np.full_like(self.amplitudes, 15)
         rng = np.random.default_rng(seed=seed)
-        self.distr_sequence_init = rng.integers(0, 3, size=peaks.shape[0])
+        self.distr_sequence_init = rng.integers(3, size=peaks.shape[0])
         self.spec_bounds = spec_bounds
         self.rmsd = 0
         self.iterations_distr = 0
