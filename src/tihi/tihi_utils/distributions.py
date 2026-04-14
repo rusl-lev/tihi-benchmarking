@@ -832,7 +832,7 @@ class ComplexFitterLinearCombination():
     ):
 
         self.verbose = verbose
-        self.residual = residual
+        self.residual_type = residual
         
         self.x_vals = data[:,0]
         self.y_vals = self.min_max_scaling(data[:,1])
@@ -895,7 +895,7 @@ class ComplexFitterLinearCombination():
 
     def approximator(self, max_iter):
         
-        self.params = least_squares(self.residual,
+        self.params = least_squares(self.residual_fun,
                             self.init_params, bounds=self.bounds,
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
@@ -954,12 +954,12 @@ class ComplexFitterLinearCombination():
     def weighted_sum(self, x_vals, weights, gaussian, lorentzian, voigt):
         return weights[0] * self.gaussian_sum(x_vals, gaussian) + weights[1] * self.lorentzian_sum(x_vals, lorentzian) + weights[2] * self.voigt_sum(x_vals, voigt)
         
-    def residual(self, params):
+    def residual_fun(self, params):
         weights, gaussian, lorentzian, voigt = self.unpack_params(params)
 
         fit = self.weighted_sum(self.x_vals, weights, gaussian, lorentzian, voigt)
 
-        residual = self.y_vals - fit if self.residual == 'default' else np.log10(self.y_vals) - np.log10(fit)
+        residual = self.y_vals - fit if self.residual_type == 'default' else np.log10(self.y_vals) - np.log10(fit)
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
 
         if self.verbose:
