@@ -835,7 +835,7 @@ class ComplexFitterLinearCombination():
         self.residual_type = residual
         
         self.x_vals = data[:,0]
-        self.y_vals = self.min_max_scaling(data[:,1])
+        self.y_vals = self.max_scaling(data[:,1])
         mask_outside = (self.x_vals >= 400) & (self.x_vals <= 3500)
         self.x_vals = self.x_vals[mask_outside]
         self.y_vals = self.y_vals[mask_outside]
@@ -843,7 +843,7 @@ class ComplexFitterLinearCombination():
                         
         # initial parameters
         self.centers = peaks[:,0]
-        self.amplitudes = self.min_max_scaling(peaks[:,1], ref_data=data[:,1])
+        self.amplitudes = self.max_scaling(peaks[:,1], ref_data=data[:,1])
         self.lorentz_widths = np.full_like(self.amplitudes, 15)
         self.gauss_widths = np.full_like(self.amplitudes, 15)
         self.weights_init = np.zeros(3)
