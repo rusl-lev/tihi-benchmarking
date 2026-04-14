@@ -851,10 +851,10 @@ class ComplexFitterLinearCombination():
         self.rmsd = 0
         self.iterations = 1
 
-        gaussian_params = np.array([self.centers, self.gauss_widths]).T.flatten()
-        lorentzian_params = np.array([self.centers, self.lorentz_widths]).T.flatten()
-        voigt_params = np.array([self.centers, self.gauss_widths, self.lorentz_widths]).T.flatten()
-        self.init_params = np.concatenate([self.weights_init, self.amplitudes, gaussian_params, lorentzian_params, voigt_params])
+        gaussian_params = self.gauss_widths
+        lorentzian_params = self.lorentz_widths
+        voigt_params = np.array([self.gauss_widths, self.lorentz_widths]).T.flatten()
+        self.init_params = np.concatenate([self.weights_init, self.amplitudes, self.centers, gaussian_params, lorentzian_params, voigt_params])
 
         center_lb = []
         center_ub = []
@@ -876,13 +876,11 @@ class ComplexFitterLinearCombination():
         zero_bound = np.zeros_like(self.centers)
         inf_bound = np.full_like(self.centers, np.inf)
 
-        gaussian_lorentzian_lb = np.array([center_lb, zero_bound]).T.flatten()
-        voigt_lb = np.array([center_lb, zero_bound, zero_bound]).T.flatten()
-        gaussian_lorentzian_ub = np.array([center_ub, inf_bound]).T.flatten()
-        voigt_ub = np.array([center_ub, inf_bound, inf_bound]).T.flatten()
+        voigt_lb = np.array([zero_bound, zero_bound]).T.flatten()
+        voigt_ub = np.array([inf_bound, inf_bound]).T.flatten()
         weights_lb = np.zeros_like(self.weights_init)
         weights_ub = np.full_like(self.weights_init, np.inf)
-        self.bounds = (np.concatenate([weights_lb, amplitude_lb, gaussian_lorentzian_lb, gaussian_lorentzian_lb, voigt_lb]), np.concatenate([weights_ub, amplitude_ub, gaussian_lorentzian_ub, gaussian_lorentzian_ub, voigt_ub]))
+        self.bounds = (np.concatenate([weights_lb, amplitude_lb, center_lb, zero_bound, zero_bound, voigt_lb]), np.concatenate([weights_ub, amplitude_ub, center_ub, inf_bound, inf_bound, voigt_ub]))
         
         self.approximator(max_iter)
 
@@ -909,30 +907,30 @@ class ComplexFitterLinearCombination():
         n = self.centers.shape[0]
         w_start = 0
         a_start = 3 * n
-        g_start = a_start + n
-        l_start = g_start + (n * 2)
-        v_start = l_start + (n * 2)
+        c_start = a_start + n
+        g_start = c_start + n
+        l_start = g_start + n
+        v_start = l_start + n
         
         weights = softmax(params[w_start:a_start].reshape(n, 3), axis=1)
-        amplitudes = params[a_start:g_start]
-        gaussian = params[g_start:l_start].reshape(n, 2)
-        lorentzian = params[l_start:v_start].reshape(n, 2)
-        voigt = params[v_start:].reshape(n, 3)
+        amplitudes = params[a_start:c_start]
+        centers = params[c_start:g_start]
+        gaussian = params[g_start:l_start]
+        lorentzian = params[l_start:v_start]
+        voigt = params[v_start:].reshape(n, 2)
 
-        return weights, amplitudes, gaussian, lorentzian, voigt
+        return weights, amplitudes, centers, gaussian, lorentzian, voigt
     
-    def gaussian(self, x, params):
-        center, gauss_width = params
+    def gaussian(self, x, center, gauss_width):
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         return np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
 
-    def lorentzian(self, x, params):
-        center, lorentz_width = params
+    def lorentzian(self, x, center, lorentz_width):
         gamma = lorentz_width / 2
         return (gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
 
-    def voigt(self, x, params):
-        center, gauss_width, lorentz_width = params
+    def voigt(self, x, center, params):
+        gauss_width, lorentz_width = params
         sigma = gauss_width / np.sqrt(2 * np.log(2))
         gamma = lorentz_width / 2.0
         
@@ -942,22 +940,23 @@ class ComplexFitterLinearCombination():
         profile = real_part / norm
         return profile
 
-    def weighted_sum(self, x_vals, weights, amplitudes, gaussian, lorentzian, voigt):
+    def weighted_sum(self, x_vals, weights, amplitudes, centers, gaussian, lorentzian, voigt):
         weighted_sum = np.zeros_like(x_vals)
         for i in range(weights.shape[0]):
             weights_i = weights[i]
             amplitude_i = amplitudes[i]
+            center_i = centers[i]
             gaussian_i = gaussian[i]
             lorentzian_i = lorentzian[i]
             voigt_i = voigt[i]
-            weighted_sum += amplitude_i * (weights_i[0] * self.gaussian(x_vals, gaussian_i) + weights_i[1] * self.lorentzian(x_vals, lorentzian_i) + weights_i[2] * self.voigt(x_vals, voigt_i))
+            weighted_sum += amplitude_i * (weights_i[0] * self.gaussian(x_vals, center_i, gaussian_i) + weights_i[1] * self.lorentzian(x_vals, center_i, lorentzian_i) + weights_i[2] * self.voigt(x_vals, center_i, voigt_i))
         return weighted_sum
         
     def residual_fun(self, params):
         
-        weights, amplitudes, gaussian, lorentzian, voigt = self.unpack_params(params)
+        weights, amplitudes, centers, gaussian, lorentzian, voigt = self.unpack_params(params)
 
-        fit = self.weighted_sum(self.x_vals, weights, amplitudes, gaussian, lorentzian, voigt)
+        fit = self.weighted_sum(self.x_vals, weights, amplitudes, centers, gaussian, lorentzian, voigt)
 
         residual = self.y_vals - fit if self.residual_type == 'default' else np.log10(self.y_vals) - np.log10(fit)
         self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
