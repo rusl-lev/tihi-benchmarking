@@ -700,7 +700,7 @@ class ComplexFitterFull():
             bounds = bounds_arg[i]
             
             approximator = self.approximators_dict[approx](
-                self.x_vals, x_masked, y_masked, 
+                self.x_vals, self.y_vals, x_masked, y_masked, 
                 params, bounds, state, peak_excluded_spec, 
                 residual=self.args_dict['residual'], max_iter=self.args_dict['max_iter'], verbose=self.args_dict['verbose']
             )
