@@ -1,5 +1,5 @@
 from scipy.optimize import least_squares
-from scipy.special import wofz
+from scipy.special import wofz, softmax
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional, Tuple
@@ -814,5 +814,160 @@ class ComplexFitterFull():
             
             plt.tight_layout()
             plt.show()
+        
+        return residual
+        
+
+class ComplexFitterLinearCombination():
+    
+    def __init__(
+        self, 
+        data: np.ndarray, 
+        peaks: np.ndarray, 
+        spec_bounds: np.ndarray, 
+        peak_rtol: Optional[float] = 5e-02, 
+        max_iter: Optional[int] = 100,
+        residual: Optional[str] = 'default',
+        verbose: bool = False
+    ):
+
+        self.verbose = verbose
+        self.residual = residual
+        
+        self.x_vals = data[:,0]
+        self.y_vals = self.min_max_scaling(data[:,1])
+        mask_outside = (self.x_vals >= 400) & (self.x_vals <= 3500)
+        self.x_vals = self.x_vals[mask_outside]
+        self.y_vals = self.y_vals[mask_outside]
+        # final_approximation = np.array([x_vals, np.zeros_like(y_vals)]).T
+                        
+        # initial parameters
+        self.centers = peaks[:,0]
+        self.amplitudes = self.min_max_scaling(peaks[:,1], ref_data=data[:,1])
+        self.lorentz_widths = np.full_like(self.amplitudes, 15)
+        self.gauss_widths = np.full_like(self.amplitudes, 15)
+        self.weights_init = np.zeros(3)
+        # self.spec_bounds = spec_bounds
+        self.rmsd = 0
+        self.iterations = 1
+
+        gaussian_params = np.array([self.centers, self.amplitudes, self.gauss_widths]).T.flatten()
+        lorentzian_params = np.array([self.centers, self.amplitudes, self.lorentz_widths]).T.flatten()
+        voigt_params = np.array([self.centers, self.amplitudes, self.gauss_widths, self.lorentz_widths]).T.flatten()
+        self.init_params = np.concatenate([self.weights_init, gaussian_params, lorentzian_params, voigt_params])
+
+        spec_bounds_diff = spec_bounds[1:] - spec_bounds[:-1]
+        allowed_dev = spec_bounds_diff * peak_rtol
+        center_lb = self.centers - allowed_dev
+        center_ub = self.centers + allowed_dev
+        amplitude_lb = np.full_like(self.amplitudes, 1e-10)
+        amplitude_ub = np.full_like(self.amplitudes, self.amplitudes.max() * 2)
+        zero_bound = np.zeros_like(self.centers)
+        inf_bound = np.full_like(self.centers, np.inf)
+
+        gaussian_lorentzian_lb = np.array([center_lb, amplitude_lb, zero_bound]).T.flatten()
+        voigt_lb = np.array([center_lb, amplitude_lb, zero_bound, zero_bound]).T.flatten()
+        gaussian_lorentzian_ub = np.array([center_ub, amplitude_ub, inf_bound]).T.flatten()
+        voigt_ub = np.array([center_ub, amplitude_ub, inf_bound, inf_bound]).T.flatten()
+        weghts_lb = np.zeros_like(self.weights_init)
+        weights_ub = np.full_like(self.weights_init, np.inf)
+        self.bounds = (np.concatenate([weghts_lb, gaussian_lorentzian_lb, gaussian_lorentzian_lb, voigt_lb]), np.concatenate([weights_ub, gaussian_lorentzian_ub, gaussian_lorentzian_ub, voigt_ub]))
+        
+        self.approximator(max_iter)
+
+    def min_max_scaling(self, data, ref_data=None):
+        if ref_data is None:
+            rescaled = (data - data.min()) / (data.max() - data.min())
+        else:
+            rescaled = (data - ref_data.min()) / (ref_data.max() - ref_data.min())
+        return rescaled
+
+    def approximator(self, max_iter):
+        
+        self.params = least_squares(self.residual,
+                            self.init_params, bounds=self.bounds,
+                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
+                            f_scale=0.1, max_nfev=max_iter).x
+
+        weights, gaussian, lorentzian, voigt = self.unpack_params(self.params)
+        self.results = self.weighted_sum(self.x_vals, weights, gaussian, lorentzian, voigt)
+        
+        return None
+
+    def unpack_params(self, params):
+        num_peaks = self.centers.shape[0]
+        weights = softmax(params[:3])
+        gaussian = params[3:3+(num_peaks*3)]
+        lorentzian = params[3+(num_peaks*3):3+(num_peaks*3)+(num_peaks*3)]
+        voigt = params[3+(num_peaks*3)+(num_peaks*3):]
+
+        return weights, gaussian, lorentzian, voigt
+    
+    def gaussian(self, x, center, amplitude, gauss_width):
+        # amplitude = amplitude * (-1.0)
+        sigma = gauss_width / np.sqrt(2 * np.log(2))
+        return amplitude * np.exp(-(x - center) ** 2 / (2 * sigma ** 2))
+
+    def gaussian_sum(self, x, params):
+        params = params.flatten().tolist()
+        params = [params[i:i + 3] for i in range(0, len(params), 3)]
+        decompositions = [self.gaussian(x, center, amp, sigma) for center, amp, sigma in params]
+        return np.sum(decompositions, axis=0)
+
+    def lorentzian(self, x, center, amplitude, lorentz_width):
+        gamma = lorentz_width / 2
+        return (amplitude * gamma ** 2) / (gamma ** 2 + (x - center) ** 2)
+
+    def lorentzian_sum(self, x, params):
+        params = params.tolist()
+        params = [params[i:i + 3] for i in range(0, len(params), 3)]
+        decompositions = [self.lorentzian(x, centre, amp, gamma) for centre, amp, gamma in params]
+        return np.sum(decompositions, axis=0)
+
+    def voigt(self, x, center, amplitude, gauss_width, lorentz_width):
+        sigma = gauss_width / np.sqrt(2 * np.log(2))
+        gamma = lorentz_width / 2.0
+        
+        z = ((x - center) + 1j * gamma) / (sigma * np.sqrt(2) + 1e-20)
+        real_part = np.real(wofz(z))
+        norm = sigma * np.sqrt(2 * np.pi)
+        profile = amplitude * real_part / norm
+        return profile
+
+    def voigt_sum(self, x, params):
+        params = params.tolist()
+        params = [params[i:i + 4] for i in range(0, len(params), 4)]
+        decompositions = [self.voigt(x, centre, amp, gw, lw) for centre, amp, gw, lw in params]
+        return np.sum(decompositions, axis=0)
+
+    def weighted_sum(self, x_vals, weights, gaussian, lorentzian, voigt):
+        return weights[0] * self.gaussian_sum(x_vals, gaussian) + weights[1] * self.lorentzian_sum(x_vals, lorentzian) + weights[2] * self.voigt_sum(x_vals, voigt)
+        
+    def residual(self, params):
+        weights, gaussian, lorentzian, voigt = self.unpack_params(params)
+
+        fit = self.weighted_sum(self.x_vals, weights, gaussian, lorentzian, voigt)
+
+        residual = self.y_vals - fit if self.residual == 'default' else np.log10(self.y_vals) - np.log10(fit)
+        self.rmsd = np.sqrt(np.mean((residual / self.y_vals) ** 2))
+
+        if self.verbose:
+            print(f'Fitter Function – Iteration no. {self.iterations}')
+            print('--------------------------')
+            print(f'Weights:')
+            print(f'Gaussian : {weights[0]} | Lorentzian : {weights[1]} | Voigt : {weights[2]}')
+            print(f'RMSD              : {self.rmsd}')
+            print()
+            fig = plt.figure(figsize=(10, 5))
+            plt.title('Fitting Results')
+            plt.plot(self.x_vals, self.y_vals, label='Reference spectrum')
+            plt.plot(self.x_vals, fit, label=f'Fitted spectrum at {self.iterations}. iteration')
+            plt.xlabel('Wavenumbers $[cm^{-1}]$')
+            plt.ylabel('Min-max scaled intensity')
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
+
+        self.iterations += 1
         
         return residual
