@@ -898,8 +898,8 @@ class ComplexFitterLinearCombination():
                             ftol=1e-9, xtol=1e-9, loss='soft_l1',
                             f_scale=0.1, max_nfev=max_iter).x
 
-        weights, gaussian, lorentzian, voigt = self.unpack_params(self.params)
-        self.results = self.weighted_sum(self.x_vals, weights, gaussian, lorentzian, voigt)
+        weights, amplitudes, centers, gaussian, lorentzian, voigt = self.unpack_params(self.params)
+        self.results = self.weighted_sum(self.x_vals, weights, amplitudes, centers, gaussian, lorentzian, voigt)
         
         return None
 
@@ -912,12 +912,12 @@ class ComplexFitterLinearCombination():
         l_start = g_start + n
         v_start = l_start + n
         
-        weights = softmax(params[w_start:a_start].reshape(n, 3), axis=1)
-        amplitudes = params[a_start:c_start]
-        centers = params[c_start:g_start]
-        gaussian = params[g_start:l_start]
-        lorentzian = params[l_start:v_start]
-        voigt = params[v_start:].reshape(n, 2)
+        weights = softmax(np.array(params[w_start:a_start]).reshape(n, 3), axis=1)
+        amplitudes = np.array(params[a_start:c_start])
+        centers = np.array(params[c_start:g_start])
+        gaussian = np.array(params[g_start:l_start])
+        lorentzian = np.array(params[l_start:v_start])
+        voigt = np.array(params[v_start:]).reshape(n, 2)
 
         return weights, amplitudes, centers, gaussian, lorentzian, voigt
     
