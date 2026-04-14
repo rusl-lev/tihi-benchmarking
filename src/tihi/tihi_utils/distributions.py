@@ -851,10 +851,10 @@ class ComplexFitterLinearCombination():
         self.rmsd = 0
         self.iterations = 1
 
-        gaussian_params = np.array([self.centers, self.amplitudes, self.gauss_widths]).T.flatten()
-        lorentzian_params = np.array([self.centers, self.amplitudes, self.lorentz_widths]).T.flatten()
-        voigt_params = np.array([self.centers, self.amplitudes, self.gauss_widths, self.lorentz_widths]).T.flatten()
-        self.init_params = np.concatenate([self.weights_init, gaussian_params, lorentzian_params, voigt_params])
+        gaussian_params = np.array([self.centers, self.gauss_widths]).T.flatten()
+        lorentzian_params = np.array([self.centers, self.lorentz_widths]).T.flatten()
+        voigt_params = np.array([self.centers, self.gauss_widths, self.lorentz_widths]).T.flatten()
+        self.init_params = np.concatenate([self.weights_init, self.amplitudes, gaussian_params, lorentzian_params, voigt_params])
 
         center_lb = []
         center_ub = []
