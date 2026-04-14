@@ -886,11 +886,11 @@ class ComplexFitterLinearCombination():
         
         self.approximator(max_iter)
 
-    def min_max_scaling(self, data, ref_data=None):
+    def max_scaling(self, data, ref_data=None):
         if ref_data is None:
-            rescaled = (data - data.min()) / (data.max() - data.min())
+            rescaled = data / data.max()
         else:
-            rescaled = (data - ref_data.min()) / (ref_data.max() - ref_data.min())
+            rescaled = data / ref_data.max()
         return rescaled
 
     def approximator(self, max_iter):
