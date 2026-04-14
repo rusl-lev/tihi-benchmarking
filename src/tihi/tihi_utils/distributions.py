@@ -845,8 +845,8 @@ class ComplexFitterLinearCombination():
         self.centers = peaks[:,0]
         self.amplitudes = self.max_scaling(peaks[:,1], ref_data=data[:,1])
         self.lorentz_widths = np.full_like(self.amplitudes, 15)
-        self.gauss_widths = np.full_like(self.amplitudes, 15)
-        self.weights_init = np.zeros(self.centers.shape[0] * 3)
+        self.gauss_widths = np.full_like(self.amplitudes, 25)
+        self.weights_init = np.array([1, 1, 0] * self.centers.shape[0])
         # self.spec_bounds = spec_bounds
         self.rmsd = 0
         self.iterations = 1
