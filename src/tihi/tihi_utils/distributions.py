@@ -856,10 +856,21 @@ class ComplexFitterLinearCombination():
         voigt_params = np.array([self.centers, self.amplitudes, self.gauss_widths, self.lorentz_widths]).T.flatten()
         self.init_params = np.concatenate([self.weights_init, gaussian_params, lorentzian_params, voigt_params])
 
-        spec_bounds_diff = spec_bounds[1:] - spec_bounds[:-1]
-        allowed_dev = spec_bounds_diff * peak_rtol
-        center_lb = self.centers - allowed_dev
-        center_ub = self.centers + allowed_dev
+        center_lb = []
+        center_ub = []
+        for i in range(spec_bounds.shape[0]-1):
+            x_lb = spec_bounds[i]
+            x_ub = spec_bounds[i+1]
+            mask = (self.centers >= x_lb) & (self.centers < x_ub)
+            allowed_dev = (x_ub - x_lb) * peak_rtol
+            centers_i = self.centers[mask]
+            center_lb_i = centers_i - allowed_dev
+            center_ub_i = centers_i + allowed_dev
+            center_lb.append(center_lb_i)
+            center_ub.append(center_ub_i)
+        
+        center_lb = np.concatenate(center_lb)
+        center_ub = np.concatenate(center_ub)
         amplitude_lb = np.full_like(self.amplitudes, 1e-10)
         amplitude_ub = np.full_like(self.amplitudes, self.amplitudes.max() * 2)
         zero_bound = np.zeros_like(self.centers)
