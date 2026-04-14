@@ -972,6 +972,7 @@ class ComplexFitterLinearCombination():
             plt.title('Fitting Results')
             plt.plot(self.x_vals, self.y_vals, label='Reference spectrum')
             plt.plot(self.x_vals, fit, label=f'Fitted spectrum at {self.iterations}. iteration')
+            plt.plot(centers, amplitudes, label=f'Peaks', marker='x', color='r', linestyle='None')
             plt.xlabel('Wavenumbers $[cm^{-1}]$')
             plt.ylabel('Min-max scaled intensity')
             plt.legend()
