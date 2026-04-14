@@ -828,7 +828,9 @@ class ComplexFitterLinearCombination():
         peak_rtol: Optional[float] = 5e-02, 
         max_iter: Optional[int] = 100,
         residual: Optional[str] = 'default',
-        verbose: bool = False
+        verbose: bool = False,
+        loss_func: str = 'soft_l1',
+        f_scale: float = 0.1,
     ):
 
         self.verbose = verbose
@@ -882,7 +884,7 @@ class ComplexFitterLinearCombination():
         weights_ub = np.full_like(self.weights_init, np.inf)
         self.bounds = (np.concatenate([weights_lb, amplitude_lb, center_lb, zero_bound, zero_bound, voigt_lb]), np.concatenate([weights_ub, amplitude_ub, center_ub, inf_bound, inf_bound, voigt_ub]))
         
-        self.approximator(max_iter)
+        self.approximator(max_iter, loss_func, f_scale)
 
     def max_scaling(self, data, ref_data=None):
         if ref_data is None:
@@ -891,12 +893,12 @@ class ComplexFitterLinearCombination():
             rescaled = data / ref_data.max()
         return rescaled
 
-    def approximator(self, max_iter):
+    def approximator(self, max_iter, loss_func, f_scale):
         
         self.params = least_squares(self.residual_fun,
                             self.init_params, bounds=self.bounds,
-                            ftol=1e-9, xtol=1e-9, loss='soft_l1',
-                            f_scale=0.1, max_nfev=max_iter).x
+                            ftol=1e-9, xtol=1e-9, loss=loss_func,
+                            f_scale=f_scale, max_nfev=max_iter).x
 
         weights, amplitudes, centers, gaussian, lorentzian, voigt = self.unpack_params(self.params)
         self.results = self.weighted_sum(self.x_vals, weights, amplitudes, centers, gaussian, lorentzian, voigt)
