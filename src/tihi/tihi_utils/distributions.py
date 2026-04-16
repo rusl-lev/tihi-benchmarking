@@ -62,8 +62,8 @@ class GaussianFitter():
         # self.error = error
 
         # print(self.params)
-        # self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = self.gaussian_sum(self.full_x_vals, self.params)
+        self.results = np.array([self.gaussian_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = self.gaussian_sum(self.full_x_vals, self.params)
         
         return error
     
@@ -162,8 +162,8 @@ class LorentzianFitter():
         # self.error = error
 
         # print(self.params)
-        # self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
-        self.results = self.lorentzian_sum(self.full_x_vals, self.params)
+        self.results = np.array([self.lorentzian_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = self.lorentzian_sum(self.full_x_vals, self.params)
         
         return error
     
@@ -263,8 +263,8 @@ class VoigtFitter():
         # self.error = error
 
         # print(self.params)
-        # self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
-        self.results = self.voigt_sum(self.full_x_vals, self.params)
+        self.results = np.array([self.voigt_sum(x, self.params) for x in self.full_x_vals])
+        # self.results = self.voigt_sum(self.full_x_vals, self.params)
         
         return error
     
